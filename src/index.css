@@ -8,51 +8,73 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Core dairy industry color palette */
+    --background: 0 0% 99%;
+    --foreground: 215 25% 27%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 215 25% 27%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 215 25% 27%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    /* Professional blue as primary - trust and reliability */
+    --primary: 214 84% 56%;
+    --primary-foreground: 0 0% 98%;
+    --primary-hover: 214 84% 51%;
+    --primary-light: 214 84% 95%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    /* Dairy green as secondary - natural and fresh */
+    --secondary: 142 52% 96%;
+    --secondary-foreground: 142 52% 15%;
+    --accent-green: 142 52% 45%;
+    --accent-green-foreground: 0 0% 98%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    /* Neutral grays for backgrounds */
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 9% 46%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 214 32% 91%;
+    --accent-foreground: 215 25% 27%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    /* Status colors */
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 98%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 98%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    /* Borders and inputs */
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 214 84% 56%;
 
-    --radius: 0.5rem;
+    --radius: 0.75rem;
 
-    --sidebar-background: 0 0% 98%;
-
-    --sidebar-foreground: 240 5.3% 26.1%;
-
-    --sidebar-primary: 240 5.9% 10%;
-
+    /* Sidebar colors matching main theme */
+    --sidebar-background: 214 84% 56%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-primary: 214 84% 51%;
     --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 214 84% 51%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 214 84% 46%;
+    --sidebar-ring: 214 84% 56%;
 
-    --sidebar-accent: 240 4.8% 95.9%;
+    /* Custom gradients for professional look */
+    --gradient-primary: linear-gradient(135deg, hsl(214 84% 56%), hsl(214 84% 46%));
+    --gradient-accent: linear-gradient(135deg, hsl(142 52% 45%), hsl(142 52% 35%));
+    --gradient-muted: linear-gradient(180deg, hsl(220 14% 98%), hsl(220 14% 96%));
 
-    --sidebar-accent-foreground: 240 5.9% 10%;
+    /* Shadows for depth */
+    --shadow-soft: 0 2px 8px -2px hsl(214 84% 56% / 0.08);
+    --shadow-medium: 0 4px 20px -4px hsl(214 84% 56% / 0.12);
+    --shadow-strong: 0 8px 32px -8px hsl(214 84% 56% / 0.16);
 
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    /* Animation timing */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-fast: all 0.15s ease-out;
   }
 
   .dark {
