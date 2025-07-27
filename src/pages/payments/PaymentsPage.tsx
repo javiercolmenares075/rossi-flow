@@ -7,33 +7,32 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   Plus, 
   Search, 
+  Filter, 
   Edit, 
-  Trash2, 
-  Eye,
+  Trash2,
   DollarSign,
   Calendar,
   AlertTriangle,
-  CheckCircle,
-  XCircle,
   Clock,
   FileText,
+  Download,
   Upload,
-  Download
+  Eye
 } from 'lucide-react';
 
-// Schema de validación
+// Validation schema for payment
 const paymentSchema = z.object({
   orderId: z.string().min(1, 'Debe seleccionar una orden'),
   amount: z.number().min(0.01, 'El monto debe ser mayor a 0'),
   paymentDate: z.string().min(1, 'La fecha de pago es obligatoria'),
-  paymentMethod: z.string().min(1, 'Debe seleccionar un método de pago'),
+  paymentType: z.enum(['cash', 'transfer', 'check', 'card']),
   reference: z.string().optional(),
   description: z.string().optional(),
   receiptFile: z.string().optional()
@@ -41,284 +40,97 @@ const paymentSchema = z.object({
 
 type PaymentFormData = z.infer<typeof paymentSchema>;
 
-interface PurchaseOrder {
-  id: string;
-  number: string;
-  provider: {
-    id: string;
-    businessName: string;
-    ruc: string;
-  };
-  total: number;
-  scheduledPaymentDate: Date;
-  paymentStatus: 'unpaid' | 'partial' | 'paid';
-  amountPaid: number;
-  amountPending: number;
-  createdAt: Date;
-}
-
-interface Payment {
-  id: string;
-  orderId: string;
-  order: PurchaseOrder;
-  amount: number;
-  paymentDate: Date;
-  paymentMethod: string;
-  reference?: string;
-  description?: string;
-  receiptFile?: string;
-  status: 'pending' | 'confirmed' | 'cancelled';
-  createdAt: Date;
-  createdBy: string;
-}
-
-// Mock data
-const mockPurchaseOrders: PurchaseOrder[] = [
+// Mock data for development
+const mockPendingOrders = [
   {
     id: '1',
-    number: 'OC-2024-001',
-    provider: {
-      id: '1',
-      businessName: 'Lácteos del Sur S.A.',
-      ruc: '80012345-1'
-    },
-    total: 1500000,
-    scheduledPaymentDate: new Date('2024-02-15'),
-    paymentStatus: 'partial',
-    amountPaid: 750000,
-    amountPending: 750000,
-    createdAt: new Date('2024-01-20')
+    orderNumber: 'OC-2024-001',
+    providerName: 'Lácteos del Sur S.A.',
+    total: 1437500,
+    status: 'pending',
+    paymentDate: new Date('2024-02-15'),
+    orderDate: new Date('2024-01-15'),
+    remainingAmount: 1437500
   },
   {
     id: '2',
-    number: 'OC-2024-002',
-    provider: {
-      id: '2',
-      businessName: 'Granja San Miguel',
-      ruc: '80023456-2'
-    },
-    total: 800000,
-    scheduledPaymentDate: new Date('2024-02-20'),
-    paymentStatus: 'unpaid',
-    amountPaid: 0,
-    amountPending: 800000,
-    createdAt: new Date('2024-01-25')
+    orderNumber: 'OC-2024-002',
+    providerName: 'Granja San Miguel',
+    total: 1725000,
+    status: 'partial',
+    paymentDate: new Date('2024-02-18'),
+    orderDate: new Date('2024-01-18'),
+    remainingAmount: 725000
   },
   {
     id: '3',
-    number: 'OC-2024-003',
-    provider: {
-      id: '1',
-      businessName: 'Lácteos del Sur S.A.',
-      ruc: '80012345-1'
-    },
-    total: 1200000,
-    scheduledPaymentDate: new Date('2024-01-30'),
-    paymentStatus: 'paid',
-    amountPaid: 1200000,
-    amountPending: 0,
-    createdAt: new Date('2024-01-15')
+    orderNumber: 'OC-2024-003',
+    providerName: 'Distribuidora Central',
+    total: 2100000,
+    status: 'pending',
+    paymentDate: new Date('2024-01-30'),
+    orderDate: new Date('2024-01-10'),
+    remainingAmount: 2100000
   }
 ];
 
-const mockPayments: Payment[] = [
+const mockPayments = [
   {
     id: '1',
     orderId: '1',
-    order: mockPurchaseOrders[0],
-    amount: 750000,
+    orderNumber: 'OC-2024-001',
+    amount: 1437500,
     paymentDate: new Date('2024-02-10'),
-    paymentMethod: 'Transferencia Bancaria',
+    paymentType: 'transfer',
     reference: 'TRF-2024-001',
-    description: 'Pago parcial de orden OC-2024-001',
-    status: 'confirmed',
+    description: 'Pago completo de orden OC-2024-001',
+    receiptFile: 'comprobante_oc_001.pdf',
     createdAt: new Date('2024-02-10'),
-    createdBy: 'Juan Pérez'
+    updatedAt: new Date('2024-02-10')
   },
   {
     id: '2',
-    orderId: '3',
-    order: mockPurchaseOrders[2],
-    amount: 1200000,
-    paymentDate: new Date('2024-01-28'),
-    paymentMethod: 'Cheque',
-    reference: 'CHQ-2024-001',
-    description: 'Pago completo de orden OC-2024-003',
-    status: 'confirmed',
-    createdAt: new Date('2024-01-28'),
-    createdBy: 'María González'
+    orderId: '2',
+    orderNumber: 'OC-2024-002',
+    amount: 1000000,
+    paymentDate: new Date('2024-02-05'),
+    paymentType: 'check',
+    reference: 'CHK-2024-001',
+    description: 'Pago parcial de orden OC-2024-002',
+    receiptFile: 'comprobante_oc_002.pdf',
+    createdAt: new Date('2024-02-05'),
+    updatedAt: new Date('2024-02-05')
   }
 ];
 
-const paymentMethods = [
-  'Transferencia Bancaria',
-  'Cheque',
-  'Efectivo',
-  'Tarjeta de Crédito',
-  'Tarjeta de Débito',
-  'Pago Móvil'
+const paymentTypes = [
+  { value: 'cash', label: 'Efectivo' },
+  { value: 'transfer', label: 'Transferencia' },
+  { value: 'check', label: 'Cheque' },
+  { value: 'card', label: 'Tarjeta' }
 ];
 
 export function PaymentsPage() {
-  const [payments, setPayments] = useState<Payment[]>(mockPayments);
-  const [purchaseOrders] = useState<PurchaseOrder[]>(mockPurchaseOrders);
+  const [pendingOrders, setPendingOrders] = useState(mockPendingOrders);
+  const [payments, setPayments] = useState(mockPayments);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState<string>('all');
-  const [filterProvider, setFilterProvider] = useState<string>('all');
+  const [filterPaymentType, setFilterPaymentType] = useState<string>('all');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
+  const [selectedPayment, setSelectedPayment] = useState<any>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const form = useForm<PaymentFormData>({
+  const createForm = useForm<PaymentFormData>({
     resolver: zodResolver(paymentSchema),
     defaultValues: {
-      orderId: '',
-      amount: 0,
-      paymentDate: new Date().toISOString().split('T')[0],
-      paymentMethod: '',
-      reference: '',
-      description: '',
-      receiptFile: ''
+      paymentType: 'transfer',
+      paymentDate: new Date().toISOString().split('T')[0]
     }
   });
 
-  const filteredPayments = payments.filter(payment => {
-    const matchesSearch = payment.order.number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         payment.order.provider.businessName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         payment.reference?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = filterStatus === 'all' || payment.status === filterStatus;
-    const matchesProvider = filterProvider === 'all' || payment.order.provider.id === filterProvider;
-    
-    return matchesSearch && matchesStatus && matchesProvider;
+  const editForm = useForm<PaymentFormData>({
+    resolver: zodResolver(paymentSchema)
   });
-
-  const pendingOrders = purchaseOrders.filter(order => order.paymentStatus !== 'paid');
-
-  const handleCreatePayment = (data: PaymentFormData) => {
-    const order = purchaseOrders.find(o => o.id === data.orderId);
-    if (!order) return;
-
-    const newPayment: Payment = {
-      id: `pay-${Date.now()}`,
-      orderId: data.orderId,
-      order,
-      amount: data.amount,
-      paymentDate: new Date(data.paymentDate),
-      paymentMethod: data.paymentMethod,
-      reference: data.reference,
-      description: data.description,
-      receiptFile: data.receiptFile,
-      status: 'pending',
-      createdAt: new Date(),
-      createdBy: 'Usuario Actual'
-    };
-    
-    setPayments([...payments, newPayment]);
-    setIsCreateDialogOpen(false);
-    form.reset();
-  };
-
-  const handleEditPayment = (data: PaymentFormData) => {
-    if (!selectedPayment) return;
-    
-    const updatedPayment: Payment = {
-      ...selectedPayment,
-      ...data,
-      order: purchaseOrders.find(o => o.id === data.orderId)!,
-      paymentDate: new Date(data.paymentDate)
-    };
-    
-    setPayments(payments.map(p => p.id === selectedPayment.id ? updatedPayment : p));
-    setIsEditDialogOpen(false);
-    setSelectedPayment(null);
-    form.reset();
-  };
-
-  const handleDeletePayment = (id: string) => {
-    const payment = payments.find(p => p.id === id);
-    if (payment && payment.status === 'confirmed') {
-      alert('No se puede eliminar un pago confirmado');
-      return;
-    }
-    
-    setPayments(payments.filter(payment => payment.id !== id));
-  };
-
-  const handleStatusChange = (paymentId: string, newStatus: Payment['status']) => {
-    setPayments(payments.map(payment => {
-      if (payment.id === paymentId) {
-        return { ...payment, status: newStatus };
-      }
-      return payment;
-    }));
-  };
-
-  const openEditDialog = (payment: Payment) => {
-    setSelectedPayment(payment);
-    form.reset({
-      orderId: payment.orderId,
-      amount: payment.amount,
-      paymentDate: payment.paymentDate.toISOString().split('T')[0],
-      paymentMethod: payment.paymentMethod,
-      reference: payment.reference || '',
-      description: payment.description || '',
-      receiptFile: payment.receiptFile || ''
-    });
-    setIsEditDialogOpen(true);
-  };
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return (
-          <Badge variant="outline" className="bg-yellow-100 text-yellow-800">
-            <Clock className="h-3 w-3 mr-1" />
-            Pendiente
-          </Badge>
-        );
-      case 'confirmed':
-        return (
-          <Badge variant="default" className="bg-green-100 text-green-800">
-            <CheckCircle className="h-3 w-3 mr-1" />
-            Confirmado
-          </Badge>
-        );
-      case 'cancelled':
-        return (
-          <Badge variant="secondary" className="bg-red-100 text-red-800">
-            <XCircle className="h-3 w-3 mr-1" />
-            Cancelado
-          </Badge>
-        );
-      default:
-        return null;
-    }
-  };
-
-  const getPaymentStatusBadge = (status: string, pending: number) => {
-    if (status === 'paid') {
-      return (
-        <Badge variant="default" className="bg-green-100 text-green-800">
-          <CheckCircle className="h-3 w-3 mr-1" />
-          Pagado
-        </Badge>
-      );
-    } else if (status === 'partial') {
-      return (
-        <Badge variant="outline" className="bg-yellow-100 text-yellow-800">
-          <AlertTriangle className="h-3 w-3 mr-1" />
-          Parcial
-        </Badge>
-      );
-    } else {
-      return (
-        <Badge variant="destructive" className="bg-red-100 text-red-800">
-          <XCircle className="h-3 w-3 mr-1" />
-          Pendiente
-        </Badge>
-      );
-    }
-  };
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('es-PY', {
@@ -327,8 +139,133 @@ export function PaymentsPage() {
     }).format(amount);
   };
 
-  const isOverdue = (date: Date) => {
-    return new Date() > date;
+  const getDaysUntilPayment = (paymentDate: Date) => {
+    const today = new Date();
+    const diffTime = paymentDate.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+  };
+
+  const getPaymentStatusBadge = (order: any) => {
+    const daysUntil = getDaysUntilPayment(order.paymentDate);
+    
+    if (order.status === 'paid') {
+      return <Badge variant="default">Pagado</Badge>;
+    } else if (order.status === 'partial') {
+      return <Badge variant="secondary">Parcial</Badge>;
+    } else if (daysUntil < 0) {
+      return <Badge variant="destructive">Vencido</Badge>;
+    } else if (daysUntil <= 7) {
+      return <Badge variant="destructive">Próximo ({daysUntil} días)</Badge>;
+    } else {
+      return <Badge variant="outline">Pendiente ({daysUntil} días)</Badge>;
+    }
+  };
+
+  const getPaymentTypeBadge = (type: string) => {
+    const paymentType = paymentTypes.find(t => t.value === type);
+    return (
+      <Badge variant="outline">
+        {paymentType?.label || type}
+      </Badge>
+    );
+  };
+
+  const totalPending = pendingOrders.reduce((sum, order) => {
+    if (order.status !== 'paid') return sum + order.remainingAmount;
+    return sum;
+  }, 0);
+
+  const overdueOrders = pendingOrders.filter(order => getDaysUntilPayment(order.paymentDate) < 0).length;
+  const upcomingOrders = pendingOrders.filter(order => {
+    const days = getDaysUntilPayment(order.paymentDate);
+    return days >= 0 && days <= 7;
+  }).length;
+
+  const filteredPayments = payments.filter(payment => {
+    const matchesSearch = payment.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         payment.reference?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesPaymentType = filterPaymentType === 'all' || payment.paymentType === filterPaymentType;
+    
+    return matchesSearch && matchesPaymentType;
+  });
+
+  const handleCreatePayment = async (data: PaymentFormData) => {
+    setIsSubmitting(true);
+    try {
+      const order = pendingOrders.find(o => o.id === data.orderId);
+      if (!order) return;
+
+      const newPayment = {
+        id: Date.now().toString(),
+        ...data,
+        orderNumber: order.orderNumber,
+        paymentDate: new Date(data.paymentDate),
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      setPayments([...payments, newPayment]);
+
+      // Update order status
+      const updatedOrders = pendingOrders.map(o => {
+        if (o.id === data.orderId) {
+          const newRemaining = o.remainingAmount - data.amount;
+          return {
+            ...o,
+            remainingAmount: Math.max(0, newRemaining),
+            status: newRemaining <= 0 ? 'paid' : 'partial'
+          };
+        }
+        return o;
+      });
+      setPendingOrders(updatedOrders);
+
+      setIsCreateDialogOpen(false);
+      createForm.reset();
+    } catch (error) {
+      console.error('Error creating payment:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleEditPayment = async (data: PaymentFormData) => {
+    if (!selectedPayment) return;
+    
+    setIsSubmitting(true);
+    try {
+      const updatedPayment = {
+        ...selectedPayment,
+        ...data,
+        paymentDate: new Date(data.paymentDate),
+        updatedAt: new Date()
+      };
+      setPayments(payments.map(p => p.id === selectedPayment.id ? updatedPayment : p));
+      setIsEditDialogOpen(false);
+      setSelectedPayment(null);
+      editForm.reset();
+    } catch (error) {
+      console.error('Error updating payment:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const openEditDialog = (payment: any) => {
+    setSelectedPayment(payment);
+    editForm.reset({
+      orderId: payment.orderId,
+      amount: payment.amount,
+      paymentDate: payment.paymentDate.toISOString().split('T')[0],
+      paymentType: payment.paymentType,
+      reference: payment.reference,
+      description: payment.description
+    });
+    setIsEditDialogOpen(true);
+  };
+
+  const handleDeletePayment = (id: string) => {
+    setPayments(payments.filter(payment => payment.id !== id));
   };
 
   return (
@@ -338,7 +275,7 @@ export function PaymentsPage() {
         <div>
           <h1 className="text-3xl font-bold">Pagos</h1>
           <p className="text-muted-foreground">
-            Gestión de pagos pendientes y realizados
+            Gestión de pagos a proveedores y control de cuentas por pagar
           </p>
         </div>
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
@@ -348,175 +285,199 @@ export function PaymentsPage() {
               Nuevo Pago
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle>Registrar Nuevo Pago</DialogTitle>
               <DialogDescription>
-                Registre un nuevo pago para una orden de compra
+                Complete la información del pago. Los campos marcados con * son obligatorios.
               </DialogDescription>
             </DialogHeader>
-            <form onSubmit={form.handleSubmit(handleCreatePayment)} className="space-y-4">
+            <form onSubmit={createForm.handleSubmit(handleCreatePayment)} className="space-y-4">
               <div>
                 <Label htmlFor="orderId">Orden de Compra *</Label>
-                <Select onValueChange={(value) => form.setValue('orderId', value)}>
+                <Select 
+                  value={createForm.watch('orderId')} 
+                  onValueChange={(value) => createForm.setValue('orderId', value)}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Seleccione una orden" />
                   </SelectTrigger>
                   <SelectContent>
-                    {pendingOrders.map((order) => (
+                    {pendingOrders.filter(order => order.status !== 'paid').map(order => (
                       <SelectItem key={order.id} value={order.id}>
-                        {order.number} - {order.provider.businessName} 
-                        (Pendiente: {formatCurrency(order.amountPending)})
+                        {order.orderNumber} - {order.providerName} ({formatCurrency(order.remainingAmount)})
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                {form.formState.errors.orderId && (
-                  <p className="text-sm text-red-500 mt-1">{form.formState.errors.orderId.message}</p>
+                {createForm.formState.errors.orderId && (
+                  <p className="text-sm text-destructive mt-1">
+                    {createForm.formState.errors.orderId.message}
+                  </p>
                 )}
               </div>
-              
-              <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <Label htmlFor="amount">Monto *</Label>
-                  <Input
-                    id="amount"
-                    type="number"
-                    step="0.01"
-                    {...form.register('amount', { valueAsNumber: true })}
-                    placeholder="Ej: 500000"
-                  />
-                  {form.formState.errors.amount && (
-                    <p className="text-sm text-red-500 mt-1">{form.formState.errors.amount.message}</p>
-                  )}
-                </div>
-                
-                <div>
-                  <Label htmlFor="paymentDate">Fecha de Pago *</Label>
-                  <Input
-                    id="paymentDate"
-                    type="date"
-                    {...form.register('paymentDate')}
-                  />
-                  {form.formState.errors.paymentDate && (
-                    <p className="text-sm text-red-500 mt-1">{form.formState.errors.paymentDate.message}</p>
-                  )}
-                </div>
-              </div>
-              
+
               <div>
-                <Label htmlFor="paymentMethod">Método de Pago *</Label>
-                <Select onValueChange={(value) => form.setValue('paymentMethod', value)}>
+                <Label htmlFor="amount">Monto (₲) *</Label>
+                <Input
+                  {...createForm.register('amount', { valueAsNumber: true })}
+                  type="number"
+                  placeholder="0"
+                />
+                {createForm.formState.errors.amount && (
+                  <p className="text-sm text-destructive mt-1">
+                    {createForm.formState.errors.amount.message}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <Label htmlFor="paymentDate">Fecha de Pago *</Label>
+                <Input
+                  {...createForm.register('paymentDate')}
+                  type="date"
+                />
+                {createForm.formState.errors.paymentDate && (
+                  <p className="text-sm text-destructive mt-1">
+                    {createForm.formState.errors.paymentDate.message}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <Label htmlFor="paymentType">Tipo de Pago *</Label>
+                <Select 
+                  value={createForm.watch('paymentType')} 
+                  onValueChange={(value) => createForm.setValue('paymentType', value as any)}
+                >
                   <SelectTrigger>
-                    <SelectValue placeholder="Seleccione método de pago" />
+                    <SelectValue placeholder="Seleccione el tipo" />
                   </SelectTrigger>
                   <SelectContent>
-                    {paymentMethods.map((method) => (
-                      <SelectItem key={method} value={method}>
-                        {method}
+                    {paymentTypes.map(type => (
+                      <SelectItem key={type.value} value={type.value}>
+                        {type.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                {form.formState.errors.paymentMethod && (
-                  <p className="text-sm text-red-500 mt-1">{form.formState.errors.paymentMethod.message}</p>
+                {createForm.formState.errors.paymentType && (
+                  <p className="text-sm text-destructive mt-1">
+                    {createForm.formState.errors.paymentType.message}
+                  </p>
                 )}
               </div>
-              
+
               <div>
                 <Label htmlFor="reference">Referencia</Label>
                 <Input
-                  id="reference"
-                  {...form.register('reference')}
-                  placeholder="Ej: TRF-2024-001"
+                  {...createForm.register('reference')}
+                  placeholder="Número de transferencia, cheque, etc."
                 />
               </div>
-              
+
               <div>
                 <Label htmlFor="description">Descripción</Label>
                 <Textarea
-                  id="description"
-                  {...form.register('description')}
-                  placeholder="Descripción del pago..."
-                  rows={3}
+                  {...createForm.register('description')}
+                  placeholder="Descripción opcional del pago"
                 />
               </div>
-              
+
+              <div>
+                <Label htmlFor="receiptFile">Comprobante</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    {...createForm.register('receiptFile')}
+                    placeholder="Nombre del archivo"
+                  />
+                  <Button type="button" variant="outline" size="sm">
+                    <Upload className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
                   Cancelar
                 </Button>
-                <Button type="submit">Registrar Pago</Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? 'Registrando...' : 'Registrar Pago'}
+                </Button>
               </DialogFooter>
             </form>
           </DialogContent>
         </Dialog>
       </div>
 
-      {/* Resumen de Pagos */}
+      {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <DollarSign className="h-5 w-5 text-green-600" />
-              <div>
-                <p className="text-sm font-medium">Total Pagado</p>
-                <p className="text-2xl font-bold">{formatCurrency(payments.reduce((sum, p) => sum + p.amount, 0))}</p>
-              </div>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Pendiente</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {formatCurrency(totalPending)}
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-red-600" />
-              <div>
-                <p className="text-sm font-medium">Pendiente</p>
-                <p className="text-2xl font-bold">{formatCurrency(pendingOrders.reduce((sum, o) => sum + o.amountPending, 0))}</p>
-              </div>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Órdenes Pendientes</CardTitle>
+            <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {pendingOrders.filter(order => order.status !== 'paid').length}
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Clock className="h-5 w-5 text-yellow-600" />
-              <div>
-                <p className="text-sm font-medium">Vencidos</p>
-                <p className="text-2xl font-bold">
-                  {pendingOrders.filter(o => isOverdue(o.scheduledPaymentDate)).length}
-                </p>
-              </div>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Vencidas</CardTitle>
+            <Clock className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-destructive">
+              {overdueOrders}
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <CheckCircle className="h-5 w-5 text-blue-600" />
-              <div>
-                <p className="text-sm font-medium">Órdenes Pagadas</p>
-                <p className="text-2xl font-bold">{purchaseOrders.filter(o => o.paymentStatus === 'paid').length}</p>
-              </div>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Próximas a Vencer</CardTitle>
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-orange-600">
+              {upcomingOrders}
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Filtros */}
+      {/* Filters */}
       <Card>
-        <CardContent className="pt-6">
-          <div className="flex gap-4">
-            <div className="flex-1">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Filter className="h-5 w-5" />
+            Filtros
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
               <Label htmlFor="search">Buscar</Label>
               <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="search"
-                  placeholder="Buscar por orden, proveedor o referencia..."
+                  placeholder="Buscar por orden, referencia..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
@@ -524,49 +485,32 @@ export function PaymentsPage() {
               </div>
             </div>
             <div>
-              <Label htmlFor="provider">Proveedor</Label>
-              <select
-                id="provider"
-                value={filterProvider}
-                onChange={(e) => setFilterProvider(e.target.value)}
-                className="w-full px-3 py-2 border border-input rounded-md"
-              >
-                <option value="all">Todos</option>
-                {Array.from(new Set(purchaseOrders.map(o => o.provider.id))).map(providerId => {
-                  const provider = purchaseOrders.find(o => o.provider.id === providerId)?.provider;
-                  return (
-                    <option key={providerId} value={providerId}>
-                      {provider?.businessName}
-                    </option>
-                  );
-                })}
-              </select>
-            </div>
-            <div>
-              <Label htmlFor="status">Estado</Label>
-              <select
-                id="status"
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-                className="w-full px-3 py-2 border border-input rounded-md"
-              >
-                <option value="all">Todos</option>
-                <option value="pending">Pendientes</option>
-                <option value="confirmed">Confirmados</option>
-                <option value="cancelled">Cancelados</option>
-              </select>
+              <Label htmlFor="filterPaymentType">Tipo de Pago</Label>
+              <Select value={filterPaymentType} onValueChange={setFilterPaymentType}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos los tipos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  {paymentTypes.map(type => (
+                    <SelectItem key={type.value} value={type.value}>
+                      {type.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Tabla de Pagos */}
+      {/* Pending Orders */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <DollarSign className="h-5 w-5" />
-            Pagos Registrados ({filteredPayments.length})
-          </CardTitle>
+          <CardTitle>Órdenes Pendientes de Pago</CardTitle>
+          <CardDescription>
+            Órdenes de compra con pagos pendientes o parciales
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
@@ -574,56 +518,123 @@ export function PaymentsPage() {
               <TableRow>
                 <TableHead>Orden</TableHead>
                 <TableHead>Proveedor</TableHead>
+                <TableHead>Total</TableHead>
+                <TableHead>Pendiente</TableHead>
+                <TableHead>Estado de Pago</TableHead>
+                <TableHead>Fecha de Pago</TableHead>
+                <TableHead>Acciones</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {pendingOrders.map((order) => (
+                <TableRow key={order.id}>
+                  <TableCell>
+                    <div>
+                      <div className="font-medium">{order.orderNumber}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {order.orderDate.toLocaleDateString()}
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="font-medium">{order.providerName}</div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="font-medium">{formatCurrency(order.total)}</div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="font-medium text-destructive">
+                      {formatCurrency(order.remainingAmount)}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {getPaymentStatusBadge(order)}
+                  </TableCell>
+                  <TableCell>
+                    <div className="text-sm">
+                      {order.paymentDate.toLocaleDateString()}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Button variant="ghost" size="sm">
+                        <FileText className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="sm">
+                        <Download className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      {/* Payments History */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Historial de Pagos</CardTitle>
+          <CardDescription>
+            Registro de todos los pagos realizados
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Orden</TableHead>
                 <TableHead>Monto</TableHead>
+                <TableHead>Tipo</TableHead>
                 <TableHead>Fecha</TableHead>
-                <TableHead>Método</TableHead>
                 <TableHead>Referencia</TableHead>
-                <TableHead>Estado</TableHead>
+                <TableHead>Comprobante</TableHead>
                 <TableHead>Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredPayments.map((payment) => (
                 <TableRow key={payment.id}>
-                  <TableCell className="font-medium">{payment.order.number}</TableCell>
                   <TableCell>
-                    <div>
-                      <div className="font-medium">{payment.order.provider.businessName}</div>
-                      <div className="text-sm text-muted-foreground">{payment.order.provider.ruc}</div>
+                    <div className="font-medium">{payment.orderNumber}</div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="font-medium">{formatCurrency(payment.amount)}</div>
+                  </TableCell>
+                  <TableCell>
+                    {getPaymentTypeBadge(payment.paymentType)}
+                  </TableCell>
+                  <TableCell>
+                    <div className="text-sm">
+                      {payment.paymentDate.toLocaleDateString()}
                     </div>
                   </TableCell>
-                  <TableCell className="font-medium">{formatCurrency(payment.amount)}</TableCell>
-                  <TableCell>{payment.paymentDate.toLocaleDateString()}</TableCell>
-                  <TableCell>{payment.paymentMethod}</TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {payment.reference || '-'}
-                  </TableCell>
-                  <TableCell>{getStatusBadge(payment.status)}</TableCell>
                   <TableCell>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => openEditDialog(payment)}
-                        disabled={payment.status === 'confirmed'}
-                      >
+                    <div className="text-sm text-muted-foreground">
+                      {payment.reference || '-'}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      {payment.receiptFile && (
+                        <>
+                          <Button variant="ghost" size="sm">
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm">
+                            <Download className="h-4 w-4" />
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Button variant="ghost" size="sm" onClick={() => openEditDialog(payment)}>
                         <Edit className="h-4 w-4" />
                       </Button>
-                      {payment.status === 'pending' && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleStatusChange(payment.id, 'confirmed')}
-                        >
-                          <CheckCircle className="h-4 w-4" />
-                        </Button>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeletePayment(payment.id)}
-                        disabled={payment.status === 'confirmed'}
-                      >
+                      <Button variant="ghost" size="sm" onClick={() => handleDeletePayment(payment.id)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
@@ -635,157 +646,90 @@ export function PaymentsPage() {
         </CardContent>
       </Card>
 
-      {/* Tabla de Órdenes Pendientes */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5" />
-            Órdenes Pendientes de Pago ({pendingOrders.length})
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Orden</TableHead>
-                <TableHead>Proveedor</TableHead>
-                <TableHead>Total</TableHead>
-                <TableHead>Pagado</TableHead>
-                <TableHead>Pendiente</TableHead>
-                <TableHead>Fecha Vencimiento</TableHead>
-                <TableHead>Estado</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {pendingOrders.map((order) => (
-                <TableRow key={order.id} className={isOverdue(order.scheduledPaymentDate) ? 'bg-red-50' : ''}>
-                  <TableCell className="font-medium">{order.number}</TableCell>
-                  <TableCell>
-                    <div>
-                      <div className="font-medium">{order.provider.businessName}</div>
-                      <div className="text-sm text-muted-foreground">{order.provider.ruc}</div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="font-medium">{formatCurrency(order.total)}</TableCell>
-                  <TableCell className="text-green-600">{formatCurrency(order.amountPaid)}</TableCell>
-                  <TableCell className="text-red-600 font-medium">{formatCurrency(order.amountPending)}</TableCell>
-                  <TableCell>
-                    <div className={`flex items-center gap-1 ${isOverdue(order.scheduledPaymentDate) ? 'text-red-600' : ''}`}>
-                      <Calendar className="h-3 w-3" />
-                      {order.scheduledPaymentDate.toLocaleDateString()}
-                      {isOverdue(order.scheduledPaymentDate) && (
-                        <AlertTriangle className="h-3 w-3 text-red-600" />
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>{getPaymentStatusBadge(order.paymentStatus, order.amountPending)}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-
-      {/* Dialog de Edición */}
+      {/* Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Editar Pago</DialogTitle>
             <DialogDescription>
-              Modifique los datos del pago
+              Modifique la información del pago seleccionado.
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={form.handleSubmit(handleEditPayment)} className="space-y-4">
+          <form onSubmit={editForm.handleSubmit(handleEditPayment)} className="space-y-4">
             <div>
-              <Label htmlFor="edit-orderId">Orden de Compra *</Label>
-              <Select onValueChange={(value) => form.setValue('orderId', value)}>
+              <Label htmlFor="edit-amount">Monto (₲) *</Label>
+              <Input
+                {...editForm.register('amount', { valueAsNumber: true })}
+                type="number"
+                placeholder="0"
+              />
+              {editForm.formState.errors.amount && (
+                <p className="text-sm text-destructive mt-1">
+                  {editForm.formState.errors.amount.message}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <Label htmlFor="edit-paymentDate">Fecha de Pago *</Label>
+              <Input
+                {...editForm.register('paymentDate')}
+                type="date"
+              />
+              {editForm.formState.errors.paymentDate && (
+                <p className="text-sm text-destructive mt-1">
+                  {editForm.formState.errors.paymentDate.message}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <Label htmlFor="edit-paymentType">Tipo de Pago *</Label>
+              <Select 
+                value={editForm.watch('paymentType')} 
+                onValueChange={(value) => editForm.setValue('paymentType', value as any)}
+              >
                 <SelectTrigger>
-                  <SelectValue placeholder="Seleccione una orden" />
+                  <SelectValue placeholder="Seleccione el tipo" />
                 </SelectTrigger>
                 <SelectContent>
-                  {purchaseOrders.map((order) => (
-                    <SelectItem key={order.id} value={order.id}>
-                      {order.number} - {order.provider.businessName}
+                  {paymentTypes.map(type => (
+                    <SelectItem key={type.value} value={type.value}>
+                      {type.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              {form.formState.errors.orderId && (
-                <p className="text-sm text-red-500 mt-1">{form.formState.errors.orderId.message}</p>
+              {editForm.formState.errors.paymentType && (
+                <p className="text-sm text-destructive mt-1">
+                  {editForm.formState.errors.paymentType.message}
+                </p>
               )}
             </div>
-            
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <Label htmlFor="edit-amount">Monto *</Label>
-                <Input
-                  id="edit-amount"
-                  type="number"
-                  step="0.01"
-                  {...form.register('amount', { valueAsNumber: true })}
-                  placeholder="Ej: 500000"
-                />
-                {form.formState.errors.amount && (
-                  <p className="text-sm text-red-500 mt-1">{form.formState.errors.amount.message}</p>
-                )}
-              </div>
-              
-              <div>
-                <Label htmlFor="edit-paymentDate">Fecha de Pago *</Label>
-                <Input
-                  id="edit-paymentDate"
-                  type="date"
-                  {...form.register('paymentDate')}
-                />
-                {form.formState.errors.paymentDate && (
-                  <p className="text-sm text-red-500 mt-1">{form.formState.errors.paymentDate.message}</p>
-                )}
-              </div>
-            </div>
-            
-            <div>
-              <Label htmlFor="edit-paymentMethod">Método de Pago *</Label>
-              <Select onValueChange={(value) => form.setValue('paymentMethod', value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccione método de pago" />
-                </SelectTrigger>
-                <SelectContent>
-                  {paymentMethods.map((method) => (
-                    <SelectItem key={method} value={method}>
-                      {method}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {form.formState.errors.paymentMethod && (
-                <p className="text-sm text-red-500 mt-1">{form.formState.errors.paymentMethod.message}</p>
-              )}
-            </div>
-            
+
             <div>
               <Label htmlFor="edit-reference">Referencia</Label>
               <Input
-                id="edit-reference"
-                {...form.register('reference')}
-                placeholder="Ej: TRF-2024-001"
+                {...editForm.register('reference')}
+                placeholder="Número de transferencia, cheque, etc."
               />
             </div>
-            
+
             <div>
               <Label htmlFor="edit-description">Descripción</Label>
               <Textarea
-                id="edit-description"
-                {...form.register('description')}
-                placeholder="Descripción del pago..."
-                rows={3}
+                {...editForm.register('description')}
+                placeholder="Descripción opcional del pago"
               />
             </div>
-            
+
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
                 Cancelar
               </Button>
-              <Button type="submit">Guardar Cambios</Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? 'Guardando...' : 'Guardar Cambios'}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>

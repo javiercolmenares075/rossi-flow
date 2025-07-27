@@ -1,4 +1,7 @@
 import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -23,6 +26,22 @@ import {
   XCircle
 } from 'lucide-react';
 import { Product } from '@/types';
+
+// Schema de validación
+const productSchema = z.object({
+  name: z.string().min(2, 'El nombre debe tener al menos 2 caracteres'),
+  code: z.string().min(3, 'El código debe tener al menos 3 caracteres'),
+  type: z.string().min(1, 'Debe seleccionar un tipo'),
+  unit: z.string().min(1, 'Debe seleccionar una unidad'),
+  storageType: z.enum(['bulk', 'batch'], {
+    required_error: 'Debe seleccionar el tipo de almacenamiento'
+  }),
+  requiresExpiryControl: z.boolean(),
+  minStock: z.number().min(0, 'El stock mínimo debe ser 0 o mayor'),
+  description: z.string().optional()
+});
+
+type ProductFormData = z.infer<typeof productSchema>;
 
 // Mock data for development
 const mockProducts: Product[] = [
@@ -70,6 +89,25 @@ const mockProducts: Product[] = [
   }
 ];
 
+const productTypes = [
+  'Lácteos',
+  'Insumos',
+  'Envases',
+  'Químicos',
+  'Aditivos',
+  'Otros'
+];
+
+const units = [
+  'Litro',
+  'Kg',
+  'Gramo',
+  'Unidad',
+  'Caja',
+  'Botella',
+  'Bolsa'
+];
+
 export function ProductsPage() {
   const [products, setProducts] = useState<Product[]>(mockProducts);
   const [searchTerm, setSearchTerm] = useState('');
@@ -79,6 +117,35 @@ export function ProductsPage() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const form = useForm<ProductFormData>({
+    resolver: zodResolver(productSchema),
+    defaultValues: {
+      name: '',
+      code: '',
+      type: '',
+      unit: '',
+      storageType: 'batch',
+      requiresExpiryControl: true,
+      minStock: 0,
+      description: ''
+    }
+  });
+
+  const editForm = useForm<ProductFormData>({
+    resolver: zodResolver(productSchema),
+    defaultValues: {
+      name: '',
+      code: '',
+      type: '',
+      unit: '',
+      storageType: 'batch',
+      requiresExpiryControl: true,
+      minStock: 0,
+      description: ''
+    }
+  });
 
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -97,7 +164,79 @@ export function ProductsPage() {
 
   const openEditDialog = (product: Product) => {
     setSelectedProduct(product);
+    editForm.reset({
+      name: product.name,
+      code: product.code,
+      type: product.type,
+      unit: product.unit,
+      storageType: product.storageType,
+      requiresExpiryControl: product.requiresExpiryControl,
+      minStock: product.minStock,
+      description: product.description || ''
+    });
     setIsEditDialogOpen(true);
+  };
+
+  const handleCreateProduct = async (data: ProductFormData) => {
+    setIsSubmitting(true);
+    try {
+      const newProduct: Product = {
+        id: `prod-${Date.now()}`,
+        ...data,
+        status: 'active',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      
+      setProducts([...products, newProduct]);
+      form.reset();
+      setIsCreateDialogOpen(false);
+      alert('Producto creado exitosamente');
+    } catch (error) {
+      console.error('Error al crear producto:', error);
+      alert('Error al crear producto');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleEditProduct = async (data: ProductFormData) => {
+    if (!selectedProduct) return;
+    
+    setIsSubmitting(true);
+    try {
+      const updatedProducts = products.map(product => 
+        product.id === selectedProduct.id 
+          ? { ...product, ...data, updatedAt: new Date() }
+          : product
+      );
+      
+      setProducts(updatedProducts);
+      setIsEditDialogOpen(false);
+      setSelectedProduct(null);
+      alert('Producto actualizado exitosamente');
+    } catch (error) {
+      console.error('Error al actualizar producto:', error);
+      alert('Error al actualizar producto');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const getStorageTypeBadge = (type: string) => {
+    return type === 'batch' ? (
+      <Badge variant="default">Por Lotes</Badge>
+    ) : (
+      <Badge variant="secondary">A Granel</Badge>
+    );
+  };
+
+  const getStatusBadge = (status: string) => {
+    return status === 'active' ? (
+      <Badge variant="default">Activo</Badge>
+    ) : (
+      <Badge variant="destructive">Inactivo</Badge>
+    );
   };
 
   return (
@@ -124,110 +263,123 @@ export function ProductsPage() {
                 Complete la información del producto. Los campos marcados con * son obligatorios.
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4">
+            <form onSubmit={form.handleSubmit(handleCreateProduct)} className="space-y-4">
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
                   <Label htmlFor="name">Nombre del Producto *</Label>
                   <Input
-                    id="name"
+                    {...form.register('name')}
                     placeholder="Ej: Leche Entera"
                   />
+                  {form.formState.errors.name && (
+                    <p className="text-sm text-red-500">{form.formState.errors.name.message}</p>
+                  )}
                 </div>
 
                 <div>
                   <Label htmlFor="code">Código *</Label>
                   <Input
-                    id="code"
+                    {...form.register('code')}
                     placeholder="Ej: LEC-001"
                   />
+                  {form.formState.errors.code && (
+                    <p className="text-sm text-red-500">{form.formState.errors.code.message}</p>
+                  )}
                 </div>
 
                 <div>
                   <Label htmlFor="type">Tipo de Producto *</Label>
-                  <Select>
+                  <Select onValueChange={(value) => form.setValue('type', value)}>
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccione el tipo" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Lácteos">Lácteos</SelectItem>
-                      <SelectItem value="Insumos">Insumos</SelectItem>
-                      <SelectItem value="Embalajes">Embalajes</SelectItem>
-                      <SelectItem value="Otros">Otros</SelectItem>
+                      {productTypes.map((type) => (
+                        <SelectItem key={type} value={type}>
+                          {type}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
+                  {form.formState.errors.type && (
+                    <p className="text-sm text-red-500">{form.formState.errors.type.message}</p>
+                  )}
                 </div>
 
                 <div>
-                  <Label htmlFor="unit">Unidad de Medida *</Label>
-                  <Select>
+                  <Label htmlFor="unit">Unidad *</Label>
+                  <Select onValueChange={(value) => form.setValue('unit', value)}>
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccione la unidad" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Litro">Litro</SelectItem>
-                      <SelectItem value="Kg">Kilogramo</SelectItem>
-                      <SelectItem value="Unidad">Unidad</SelectItem>
-                      <SelectItem value="Caja">Caja</SelectItem>
-                      <SelectItem value="Botella">Botella</SelectItem>
+                      {units.map((unit) => (
+                        <SelectItem key={unit} value={unit}>
+                          {unit}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
+                  {form.formState.errors.unit && (
+                    <p className="text-sm text-red-500">{form.formState.errors.unit.message}</p>
+                  )}
                 </div>
 
                 <div>
                   <Label htmlFor="storageType">Tipo de Almacenamiento *</Label>
-                  <Select>
+                  <Select onValueChange={(value) => form.setValue('storageType', value as 'bulk' | 'batch')}>
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccione el tipo" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="bulk">A Granel</SelectItem>
                       <SelectItem value="batch">Por Lotes</SelectItem>
+                      <SelectItem value="bulk">A Granel</SelectItem>
                     </SelectContent>
                   </Select>
+                  {form.formState.errors.storageType && (
+                    <p className="text-sm text-red-500">{form.formState.errors.storageType.message}</p>
+                  )}
                 </div>
 
                 <div>
                   <Label htmlFor="minStock">Stock Mínimo *</Label>
                   <Input
-                    id="minStock"
+                    {...form.register('minStock', { valueAsNumber: true })}
                     type="number"
                     placeholder="0"
                   />
+                  {form.formState.errors.minStock && (
+                    <p className="text-sm text-red-500">{form.formState.errors.minStock.message}</p>
+                  )}
+                </div>
+
+                <div className="md:col-span-2">
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      checked={form.watch('requiresExpiryControl')}
+                      onCheckedChange={(checked) => form.setValue('requiresExpiryControl', checked)}
+                    />
+                    <Label htmlFor="requiresExpiryControl">Requiere Control de Vencimiento</Label>
+                  </div>
                 </div>
 
                 <div className="md:col-span-2">
                   <Label htmlFor="description">Descripción</Label>
                   <Textarea
-                    id="description"
-                    placeholder="Descripción del producto"
-                    rows={3}
+                    {...form.register('description')}
+                    placeholder="Descripción del producto..."
                   />
                 </div>
-
-                <div className="md:col-span-2">
-                  <div className="flex items-center space-x-2">
-                    <Switch id="expiryControl" />
-                    <Label htmlFor="expiryControl">Requiere Control de Vencimiento</Label>
-                  </div>
-                </div>
-
-                <div>
-                  <Label htmlFor="status">Estado</Label>
-                  <Select defaultValue="active">
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccione el estado" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="active">Activo</SelectItem>
-                      <SelectItem value="inactive">Inactivo</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
               </div>
-            </div>
-            <DialogFooter>
-              <Button type="submit">Crear Producto</Button>
-            </DialogFooter>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? 'Creando...' : 'Crear Producto'}
+                </Button>
+              </DialogFooter>
+            </form>
           </DialogContent>
         </Dialog>
       </div>
@@ -241,7 +393,7 @@ export function ProductsPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-5">
+          <div className="grid gap-4 md:grid-cols-4">
             <div className="relative">
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
@@ -257,20 +409,21 @@ export function ProductsPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos los tipos</SelectItem>
-                <SelectItem value="Lácteos">Lácteos</SelectItem>
-                <SelectItem value="Insumos">Insumos</SelectItem>
-                <SelectItem value="Embalajes">Embalajes</SelectItem>
-                <SelectItem value="Otros">Otros</SelectItem>
+                {productTypes.map((type) => (
+                  <SelectItem key={type} value={type}>
+                    {type}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
             <Select value={filterStorageType} onValueChange={setFilterStorageType}>
               <SelectTrigger>
-                <SelectValue placeholder="Almacenamiento" />
+                <SelectValue placeholder="Tipo de almacenamiento" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="bulk">A Granel</SelectItem>
                 <SelectItem value="batch">Por Lotes</SelectItem>
+                <SelectItem value="bulk">A Granel</SelectItem>
               </SelectContent>
             </Select>
             <Select value={filterStatus} onValueChange={setFilterStatus}>
@@ -283,11 +436,6 @@ export function ProductsPage() {
                 <SelectItem value="inactive">Inactivo</SelectItem>
               </SelectContent>
             </Select>
-            <div className="flex items-center gap-2">
-              <Badge variant="secondary">
-                {filteredProducts.length} productos
-              </Badge>
-            </div>
           </div>
         </CardContent>
       </Card>
@@ -309,7 +457,7 @@ export function ProductsPage() {
                   <TableHead>Tipo</TableHead>
                   <TableHead>Almacenamiento</TableHead>
                   <TableHead>Stock Mínimo</TableHead>
-                  <TableHead>Control Vencimiento</TableHead>
+                  <TableHead>Vencimiento</TableHead>
                   <TableHead>Estado</TableHead>
                   <TableHead>Acciones</TableHead>
                 </TableRow>
@@ -321,27 +469,15 @@ export function ProductsPage() {
                       <div>
                         <div className="font-medium">{product.name}</div>
                         <div className="text-sm text-muted-foreground">
-                          Código: {product.code}
-                        </div>
-                        {product.description && (
-                          <div className="text-sm text-muted-foreground">
-                            {product.description}
-                          </div>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <Badge variant="outline">{product.type}</Badge>
-                        <div className="text-sm text-muted-foreground mt-1">
-                          {product.unit}
+                          {product.code} • {product.unit}
                         </div>
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={product.storageType === 'batch' ? 'default' : 'secondary'}>
-                        {product.storageType === 'batch' ? 'Por Lotes' : 'A Granel'}
-                      </Badge>
+                      <Badge variant="outline">{product.type}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      {getStorageTypeBadge(product.storageType)}
                     </TableCell>
                     <TableCell>
                       <div className="text-sm">
@@ -350,28 +486,17 @@ export function ProductsPage() {
                     </TableCell>
                     <TableCell>
                       {product.requiresExpiryControl ? (
-                        <div className="flex items-center gap-1 text-green-600">
-                          <CheckCircle className="h-4 w-4" />
-                          <span className="text-sm">Sí</span>
-                        </div>
+                        <CheckCircle className="h-4 w-4 text-green-600" />
                       ) : (
-                        <div className="flex items-center gap-1 text-gray-500">
-                          <XCircle className="h-4 w-4" />
-                          <span className="text-sm">No</span>
-                        </div>
+                        <XCircle className="h-4 w-4 text-gray-400" />
                       )}
                     </TableCell>
                     <TableCell>
-                      <Badge variant={product.status === 'active' ? 'default' : 'destructive'}>
-                        {product.status === 'active' ? 'Activo' : 'Inactivo'}
-                      </Badge>
+                      {getStatusBadge(product.status)}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                        >
+                        <Button variant="ghost" size="sm">
                           <Eye className="h-4 w-4" />
                         </Button>
                         <Button
@@ -407,113 +532,123 @@ export function ProductsPage() {
               Modifique la información del producto seleccionado.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
+          <form onSubmit={editForm.handleSubmit(handleEditProduct)} className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
               <div>
-                <Label htmlFor="edit-name">Nombre del Producto</Label>
+                <Label htmlFor="edit-name">Nombre del Producto *</Label>
                 <Input
-                  id="edit-name"
-                  defaultValue={selectedProduct?.name}
+                  {...editForm.register('name')}
+                  placeholder="Ej: Leche Entera"
                 />
+                {editForm.formState.errors.name && (
+                  <p className="text-sm text-red-500">{editForm.formState.errors.name.message}</p>
+                )}
               </div>
 
               <div>
-                <Label htmlFor="edit-code">Código</Label>
+                <Label htmlFor="edit-code">Código *</Label>
                 <Input
-                  id="edit-code"
-                  defaultValue={selectedProduct?.code}
+                  {...editForm.register('code')}
+                  placeholder="Ej: LEC-001"
                 />
+                {editForm.formState.errors.code && (
+                  <p className="text-sm text-red-500">{editForm.formState.errors.code.message}</p>
+                )}
               </div>
 
               <div>
-                <Label htmlFor="edit-type">Tipo de Producto</Label>
-                <Select defaultValue={selectedProduct?.type}>
+                <Label htmlFor="edit-type">Tipo de Producto *</Label>
+                <Select onValueChange={(value) => editForm.setValue('type', value)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Seleccione el tipo" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Lácteos">Lácteos</SelectItem>
-                    <SelectItem value="Insumos">Insumos</SelectItem>
-                    <SelectItem value="Embalajes">Embalajes</SelectItem>
-                    <SelectItem value="Otros">Otros</SelectItem>
+                    {productTypes.map((type) => (
+                      <SelectItem key={type} value={type}>
+                        {type}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
+                {editForm.formState.errors.type && (
+                  <p className="text-sm text-red-500">{editForm.formState.errors.type.message}</p>
+                )}
               </div>
 
               <div>
-                <Label htmlFor="edit-unit">Unidad de Medida</Label>
-                <Select defaultValue={selectedProduct?.unit}>
+                <Label htmlFor="edit-unit">Unidad *</Label>
+                <Select onValueChange={(value) => editForm.setValue('unit', value)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Seleccione la unidad" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Litro">Litro</SelectItem>
-                    <SelectItem value="Kg">Kilogramo</SelectItem>
-                    <SelectItem value="Unidad">Unidad</SelectItem>
-                    <SelectItem value="Caja">Caja</SelectItem>
-                    <SelectItem value="Botella">Botella</SelectItem>
+                    {units.map((unit) => (
+                      <SelectItem key={unit} value={unit}>
+                        {unit}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
+                {editForm.formState.errors.unit && (
+                  <p className="text-sm text-red-500">{editForm.formState.errors.unit.message}</p>
+                )}
               </div>
 
               <div>
-                <Label htmlFor="edit-storageType">Tipo de Almacenamiento</Label>
-                <Select defaultValue={selectedProduct?.storageType}>
+                <Label htmlFor="edit-storageType">Tipo de Almacenamiento *</Label>
+                <Select onValueChange={(value) => editForm.setValue('storageType', value as 'bulk' | 'batch')}>
                   <SelectTrigger>
                     <SelectValue placeholder="Seleccione el tipo" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="bulk">A Granel</SelectItem>
                     <SelectItem value="batch">Por Lotes</SelectItem>
+                    <SelectItem value="bulk">A Granel</SelectItem>
                   </SelectContent>
                 </Select>
+                {editForm.formState.errors.storageType && (
+                  <p className="text-sm text-red-500">{editForm.formState.errors.storageType.message}</p>
+                )}
               </div>
 
               <div>
-                <Label htmlFor="edit-minStock">Stock Mínimo</Label>
+                <Label htmlFor="edit-minStock">Stock Mínimo *</Label>
                 <Input
-                  id="edit-minStock"
+                  {...editForm.register('minStock', { valueAsNumber: true })}
                   type="number"
-                  defaultValue={selectedProduct?.minStock}
+                  placeholder="0"
                 />
+                {editForm.formState.errors.minStock && (
+                  <p className="text-sm text-red-500">{editForm.formState.errors.minStock.message}</p>
+                )}
+              </div>
+
+              <div className="md:col-span-2">
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    checked={editForm.watch('requiresExpiryControl')}
+                    onCheckedChange={(checked) => editForm.setValue('requiresExpiryControl', checked)}
+                  />
+                  <Label htmlFor="edit-requiresExpiryControl">Requiere Control de Vencimiento</Label>
+                </div>
               </div>
 
               <div className="md:col-span-2">
                 <Label htmlFor="edit-description">Descripción</Label>
                 <Textarea
-                  id="edit-description"
-                  defaultValue={selectedProduct?.description}
-                  rows={3}
+                  {...editForm.register('description')}
+                  placeholder="Descripción del producto..."
                 />
               </div>
-
-              <div className="md:col-span-2">
-                <div className="flex items-center space-x-2">
-                  <Switch 
-                    id="edit-expiryControl" 
-                    defaultChecked={selectedProduct?.requiresExpiryControl}
-                  />
-                  <Label htmlFor="edit-expiryControl">Requiere Control de Vencimiento</Label>
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor="edit-status">Estado</Label>
-                <Select defaultValue={selectedProduct?.status}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccione el estado" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="active">Activo</SelectItem>
-                    <SelectItem value="inactive">Inactivo</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
             </div>
-          </div>
-          <DialogFooter>
-            <Button type="submit">Actualizar Producto</Button>
-          </DialogFooter>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? 'Actualizando...' : 'Actualizar Producto'}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </div>

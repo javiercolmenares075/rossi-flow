@@ -28,21 +28,11 @@ import { NewPaymentPage } from './pages/payments/NewPaymentPage';
 import { PaymentHistoryPage } from './pages/payments/PaymentHistoryPage';
 import { ProductionRecipesPage } from './pages/production/ProductionRecipesPage';
 import { ProductionOrdersPage } from './pages/production/ProductionOrdersPage';
-import { NewProductionOrderPage } from './pages/production/NewProductionOrderPage';
 import { ProductionTrackingPage } from './pages/production/ProductionTrackingPage';
 import { NotificationsPage } from './pages/notifications/NotificationsPage';
-import { AlertsPage } from './pages/notifications/AlertsPage';
-import { RemindersPage } from './pages/notifications/RemindersPage';
-import { NotificationSettingsPage } from './pages/notifications/NotificationSettingsPage';
-import { ReportsDashboardPage } from './pages/reports/ReportsDashboardPage';
-import { InventoryReportsPage } from './pages/reports/InventoryReportsPage';
-import { PurchaseReportsPage } from './pages/reports/PurchaseReportsPage';
-import { ProductionReportsPage } from './pages/reports/ProductionReportsPage';
-import { PaymentReportsPage } from './pages/reports/PaymentReportsPage';
-import { UsersPage } from './pages/admin/UsersPage';
-import { RolesPage } from './pages/admin/RolesPage';
-import { AuditPage } from './pages/admin/AuditPage';
-import { SettingsPage } from './pages/admin/SettingsPage';
+
+// Placeholder components for pages not yet implemented
+import { PlaceholderPage } from './components/ui/PlaceholderPage';
 
 function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -85,40 +75,61 @@ function App() {
               {/* Payments */}
               <Route path="/payments" element={<PaymentsPage />} />
               <Route path="/payments/new" element={<NewPaymentPage />} />
-              <Route path="/payments/pending" element={<PaymentsPage />} />
               <Route path="/payments/history" element={<PaymentHistoryPage />} />
               
               {/* Production */}
               <Route path="/production/recipes" element={<ProductionRecipesPage />} />
               <Route path="/production/orders" element={<ProductionOrdersPage />} />
-              <Route path="/production/new" element={<NewProductionOrderPage />} />
               <Route path="/production/tracking" element={<ProductionTrackingPage />} />
               
               {/* Notifications */}
               <Route path="/notifications" element={<NotificationsPage />} />
-              <Route path="/notifications/alerts" element={<AlertsPage />} />
-              <Route path="/notifications/reminders" element={<RemindersPage />} />
-              <Route path="/notifications/settings" element={<NotificationSettingsPage />} />
-              
-              {/* Reports */}
-              <Route path="/reports/dashboard" element={<ReportsDashboardPage />} />
-              <Route path="/reports/inventory" element={<InventoryReportsPage />} />
-              <Route path="/reports/purchases" element={<PurchaseReportsPage />} />
-              <Route path="/reports/production" element={<ProductionReportsPage />} />
-              <Route path="/reports/payments" element={<PaymentReportsPage />} />
               
               {/* Admin */}
-              <Route path="/admin/users" element={<UsersPage />} />
-              <Route path="/admin/roles" element={<RolesPage />} />
-              <Route path="/admin/audit" element={<AuditPage />} />
-              <Route path="/admin/settings" element={<SettingsPage />} />
+              <Route path="/admin/users" element={
+                <PlaceholderPage
+                  title="Gestión de Usuarios"
+                  description="Administración de usuarios y roles del sistema"
+                  priority="medium"
+                  estimatedCompletion="Semana 6"
+                  features={[
+                    'Registro de usuarios con roles',
+                    'Gestión de permisos y accesos',
+                    'Auditoría de actividades',
+                    'Configuración de seguridad'
+                  ]}
+                />
+              } />
+              <Route path="/admin/settings" element={
+                <PlaceholderPage
+                  title="Configuración del Sistema"
+                  description="Configuración general y parámetros del sistema"
+                  priority="low"
+                  estimatedCompletion="Semana 6"
+                  features={[
+                    'Configuración general',
+                    'Parámetros del sistema',
+                    'Backup y restauración',
+                    'Logs y auditoría'
+                  ]}
+                />
+              } />
               
-              {/* Legacy routes for backward compatibility */}
-              <Route path="/productos" element={<ProductosView />} />
-              <Route path="/proveedores" element={<ProveedoresView />} />
-              
-              {/* Fallback */}
-              <Route path="*" element={<DashboardView />} />
+              {/* Reports */}
+              <Route path="/reports" element={
+                <PlaceholderPage
+                  title="Reportes"
+                  description="Generación de reportes y análisis de datos"
+                  priority="medium"
+                  estimatedCompletion="Semana 5"
+                  features={[
+                    'Reportes de inventario',
+                    'Análisis de ventas',
+                    'Reportes financieros',
+                    'Exportación de datos'
+                  ]}
+                />
+              } />
             </Routes>
           </div>
         </main>

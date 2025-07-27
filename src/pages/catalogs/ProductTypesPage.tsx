@@ -7,161 +7,173 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { 
   Plus, 
   Search, 
+  Filter, 
   Edit, 
   Trash2, 
-  Eye, 
-  Package,
+  Tag,
   CheckCircle,
   XCircle
 } from 'lucide-react';
 
-// Schema de validación
+// Validation schema for product type
 const productTypeSchema = z.object({
   name: z.string().min(2, 'El nombre debe tener al menos 2 caracteres'),
   code: z.string().min(2, 'El código debe tener al menos 2 caracteres'),
   description: z.string().optional(),
-  status: z.enum(['active', 'inactive'])
+  category: z.enum(['raw_material', 'finished_product', 'packaging', 'other']),
+  status: z.enum(['active', 'inactive']).default('active')
 });
 
 type ProductTypeFormData = z.infer<typeof productTypeSchema>;
 
-interface ProductType {
-  id: string;
-  name: string;
-  code: string;
-  description?: string;
-  status: 'active' | 'inactive';
-  productCount: number;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-// Mock data
-const mockProductTypes: ProductType[] = [
+// Mock data for development
+const mockProductTypes = [
   {
     id: '1',
-    name: 'Lácteos',
-    code: 'LAC',
-    description: 'Productos derivados de la leche',
+    name: 'Materia Prima',
+    code: 'MP',
+    description: 'Materiales básicos para la producción',
+    category: 'raw_material',
     status: 'active',
-    productCount: 5,
     createdAt: new Date('2024-01-10'),
     updatedAt: new Date('2024-01-15')
   },
   {
     id: '2',
-    name: 'Aves',
-    code: 'AVE',
-    description: 'Productos avícolas',
+    name: 'Producto Terminado',
+    code: 'PT',
+    description: 'Productos finales listos para venta',
+    category: 'finished_product',
     status: 'active',
-    productCount: 3,
     createdAt: new Date('2024-01-05'),
     updatedAt: new Date('2024-01-12')
   },
   {
     id: '3',
-    name: 'Insumos',
-    code: 'INS',
-    description: 'Materias primas para producción',
+    name: 'Embalaje',
+    code: 'EMB',
+    description: 'Materiales de empaque y embalaje',
+    category: 'packaging',
     status: 'active',
-    productCount: 8,
     createdAt: new Date('2024-01-08'),
-    updatedAt: new Date('2024-01-14')
+    updatedAt: new Date('2024-01-10')
   }
 ];
 
+const categories = [
+  { value: 'raw_material', label: 'Materia Prima' },
+  { value: 'finished_product', label: 'Producto Terminado' },
+  { value: 'packaging', label: 'Embalaje' },
+  { value: 'other', label: 'Otros' }
+];
+
 export function ProductTypesPage() {
-  const [productTypes, setProductTypes] = useState<ProductType[]>(mockProductTypes);
+  const [productTypes, setProductTypes] = useState(mockProductTypes);
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterCategory, setFilterCategory] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [selectedProductType, setSelectedProductType] = useState<ProductType | null>(null);
+  const [selectedProductType, setSelectedProductType] = useState<any>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const form = useForm<ProductTypeFormData>({
+  const createForm = useForm<ProductTypeFormData>({
     resolver: zodResolver(productTypeSchema),
     defaultValues: {
-      name: '',
-      code: '',
-      description: '',
-      status: 'active'
+      status: 'active',
+      category: 'raw_material'
     }
   });
 
-  const filteredProductTypes = productTypes.filter(type => {
-    const matchesSearch = type.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         type.code.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = filterStatus === 'all' || type.status === filterStatus;
-    
-    return matchesSearch && matchesStatus;
+  const editForm = useForm<ProductTypeFormData>({
+    resolver: zodResolver(productTypeSchema)
   });
 
-  const handleCreateProductType = (data: ProductTypeFormData) => {
-    const newProductType: ProductType = {
-      id: `pt-${Date.now()}`,
-      ...data,
-      productCount: 0,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
+  const filteredProductTypes = productTypes.filter(productType => {
+    const matchesSearch = productType.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         productType.code.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = filterCategory === 'all' || productType.category === filterCategory;
+    const matchesStatus = filterStatus === 'all' || productType.status === filterStatus;
     
-    setProductTypes([...productTypes, newProductType]);
-    setIsCreateDialogOpen(false);
-    form.reset();
-  };
-
-  const handleEditProductType = (data: ProductTypeFormData) => {
-    if (!selectedProductType) return;
-    
-    const updatedProductTypes = productTypes.map(type => 
-      type.id === selectedProductType.id 
-        ? { ...type, ...data, updatedAt: new Date() }
-        : type
-    );
-    
-    setProductTypes(updatedProductTypes);
-    setIsEditDialogOpen(false);
-    setSelectedProductType(null);
-    form.reset();
-  };
+    return matchesSearch && matchesCategory && matchesStatus;
+  });
 
   const handleDeleteProductType = (id: string) => {
-    const productType = productTypes.find(pt => pt.id === id);
-    if (productType && productType.productCount > 0) {
-      alert('No se puede eliminar un tipo de producto que tiene productos asociados');
-      return;
-    }
-    
-    setProductTypes(productTypes.filter(type => type.id !== id));
+    setProductTypes(productTypes.filter(productType => productType.id !== id));
   };
 
-  const openEditDialog = (productType: ProductType) => {
+  const handleCreateProductType = async (data: ProductTypeFormData) => {
+    setIsSubmitting(true);
+    try {
+      const newProductType = {
+        id: Date.now().toString(),
+        ...data,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      setProductTypes([...productTypes, newProductType]);
+      setIsCreateDialogOpen(false);
+      createForm.reset();
+    } catch (error) {
+      console.error('Error creating product type:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleEditProductType = async (data: ProductTypeFormData) => {
+    if (!selectedProductType) return;
+    
+    setIsSubmitting(true);
+    try {
+      const updatedProductType = {
+        ...selectedProductType,
+        ...data,
+        updatedAt: new Date()
+      };
+      setProductTypes(productTypes.map(pt => pt.id === selectedProductType.id ? updatedProductType : pt));
+      setIsEditDialogOpen(false);
+      setSelectedProductType(null);
+      editForm.reset();
+    } catch (error) {
+      console.error('Error updating product type:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const openEditDialog = (productType: any) => {
     setSelectedProductType(productType);
-    form.reset({
+    editForm.reset({
       name: productType.name,
       code: productType.code,
-      description: productType.description || '',
+      description: productType.description,
+      category: productType.category,
       status: productType.status
     });
     setIsEditDialogOpen(true);
   };
 
-  const getStatusBadge = (status: string) => {
-    return status === 'active' ? (
-      <Badge variant="default" className="bg-green-100 text-green-800">
-        <CheckCircle className="h-3 w-3 mr-1" />
-        Activo
+  const getCategoryBadge = (category: string) => {
+    const categoryData = categories.find(c => c.value === category);
+    return (
+      <Badge variant="outline">
+        {categoryData?.label || category}
       </Badge>
-    ) : (
-      <Badge variant="secondary" className="bg-gray-100 text-gray-800">
-        <XCircle className="h-3 w-3 mr-1" />
-        Inactivo
+    );
+  };
+
+  const getStatusBadge = (status: string) => {
+    return (
+      <Badge variant={status === 'active' ? 'default' : 'destructive'}>
+        {status === 'active' ? 'Activo' : 'Inactivo'}
       </Badge>
     );
   };
@@ -173,7 +185,7 @@ export function ProductTypesPage() {
         <div>
           <h1 className="text-3xl font-bold">Tipos de Producto</h1>
           <p className="text-muted-foreground">
-            Clasificación de productos para facilitar búsquedas y reportes
+            Gestión de categorías y tipos de productos del sistema
           </p>
         </div>
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
@@ -183,67 +195,115 @@ export function ProductTypesPage() {
               Nuevo Tipo
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle>Crear Tipo de Producto</DialogTitle>
+              <DialogTitle>Crear Nuevo Tipo de Producto</DialogTitle>
               <DialogDescription>
-                Agregue un nuevo tipo de producto al sistema
+                Complete la información del tipo de producto. Los campos marcados con * son obligatorios.
               </DialogDescription>
             </DialogHeader>
-            <form onSubmit={form.handleSubmit(handleCreateProductType)} className="space-y-4">
+            <form onSubmit={createForm.handleSubmit(handleCreateProductType)} className="space-y-4">
               <div>
                 <Label htmlFor="name">Nombre *</Label>
                 <Input
-                  id="name"
-                  {...form.register('name')}
-                  placeholder="Ej: Lácteos"
+                  {...createForm.register('name')}
+                  placeholder="Ej: Materia Prima"
                 />
-                {form.formState.errors.name && (
-                  <p className="text-sm text-red-500 mt-1">{form.formState.errors.name.message}</p>
+                {createForm.formState.errors.name && (
+                  <p className="text-sm text-destructive mt-1">
+                    {createForm.formState.errors.name.message}
+                  </p>
                 )}
               </div>
-              
+
               <div>
                 <Label htmlFor="code">Código *</Label>
                 <Input
-                  id="code"
-                  {...form.register('code')}
-                  placeholder="Ej: LAC"
+                  {...createForm.register('code')}
+                  placeholder="Ej: MP"
                 />
-                {form.formState.errors.code && (
-                  <p className="text-sm text-red-500 mt-1">{form.formState.errors.code.message}</p>
+                {createForm.formState.errors.code && (
+                  <p className="text-sm text-destructive mt-1">
+                    {createForm.formState.errors.code.message}
+                  </p>
                 )}
               </div>
-              
+
               <div>
                 <Label htmlFor="description">Descripción</Label>
                 <Textarea
-                  id="description"
-                  {...form.register('description')}
-                  placeholder="Descripción opcional del tipo de producto"
-                  rows={3}
+                  {...createForm.register('description')}
+                  placeholder="Descripción opcional del tipo"
                 />
               </div>
-              
+
+              <div>
+                <Label htmlFor="category">Categoría *</Label>
+                <Select 
+                  value={createForm.watch('category')} 
+                  onValueChange={(value) => createForm.setValue('category', value as any)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccione la categoría" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map(category => (
+                      <SelectItem key={category.value} value={category.value}>
+                        {category.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {createForm.formState.errors.category && (
+                  <p className="text-sm text-destructive mt-1">
+                    {createForm.formState.errors.category.message}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <Label htmlFor="status">Estado</Label>
+                <Select 
+                  value={createForm.watch('status')} 
+                  onValueChange={(value) => createForm.setValue('status', value as 'active' | 'inactive')}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccione el estado" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Activo</SelectItem>
+                    <SelectItem value="inactive">Inactivo</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
                   Cancelar
                 </Button>
-                <Button type="submit">Crear Tipo</Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? 'Creando...' : 'Crear Tipo'}
+                </Button>
               </DialogFooter>
             </form>
           </DialogContent>
         </Dialog>
       </div>
 
-      {/* Filtros */}
+      {/* Filters */}
       <Card>
-        <CardContent className="pt-6">
-          <div className="flex gap-4">
-            <div className="flex-1">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Filter className="h-5 w-5" />
+            Filtros
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-3">
+            <div>
               <Label htmlFor="search">Buscar</Label>
               <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="search"
                   placeholder="Buscar por nombre o código..."
@@ -254,73 +314,84 @@ export function ProductTypesPage() {
               </div>
             </div>
             <div>
-              <Label htmlFor="status">Estado</Label>
-              <select
-                id="status"
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-                className="w-full px-3 py-2 border border-input rounded-md"
-              >
-                <option value="all">Todos</option>
-                <option value="active">Activos</option>
-                <option value="inactive">Inactivos</option>
-              </select>
+              <Label htmlFor="filterCategory">Categoría</Label>
+              <Select value={filterCategory} onValueChange={setFilterCategory}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todas las categorías" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas</SelectItem>
+                  {categories.map(category => (
+                    <SelectItem key={category.value} value={category.value}>
+                      {category.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="filterStatus">Estado</Label>
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos los estados" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="active">Activo</SelectItem>
+                  <SelectItem value="inactive">Inactivo</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Tabla */}
+      {/* Product Types Table */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Package className="h-5 w-5" />
-            Tipos de Producto ({filteredProductTypes.length})
-          </CardTitle>
+          <CardTitle>Lista de Tipos de Producto</CardTitle>
+          <CardDescription>
+            {filteredProductTypes.length} tipos encontrados
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Código</TableHead>
                 <TableHead>Nombre</TableHead>
+                <TableHead>Código</TableHead>
+                <TableHead>Categoría</TableHead>
                 <TableHead>Descripción</TableHead>
-                <TableHead>Productos</TableHead>
                 <TableHead>Estado</TableHead>
-                <TableHead>Fecha Creación</TableHead>
                 <TableHead>Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredProductTypes.map((productType) => (
                 <TableRow key={productType.id}>
-                  <TableCell className="font-medium">{productType.code}</TableCell>
-                  <TableCell>{productType.name}</TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {productType.description || '-'}
+                  <TableCell>
+                    <div className="font-medium">{productType.name}</div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline">{productType.productCount}</Badge>
-                  </TableCell>
-                  <TableCell>{getStatusBadge(productType.status)}</TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {productType.createdAt.toLocaleDateString()}
+                    <Badge variant="secondary">{productType.code}</Badge>
                   </TableCell>
                   <TableCell>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => openEditDialog(productType)}
-                      >
+                    {getCategoryBadge(productType.category)}
+                  </TableCell>
+                  <TableCell>
+                    <div className="text-sm text-muted-foreground max-w-xs truncate">
+                      {productType.description || 'Sin descripción'}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {getStatusBadge(productType.status)}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Button variant="ghost" size="sm" onClick={() => openEditDialog(productType)}>
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeleteProductType(productType.id)}
-                        disabled={productType.productCount > 0}
-                      >
+                      <Button variant="ghost" size="sm" onClick={() => handleDeleteProductType(productType.id)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
@@ -332,67 +403,97 @@ export function ProductTypesPage() {
         </CardContent>
       </Card>
 
-      {/* Dialog de Edición */}
+      {/* Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Editar Tipo de Producto</DialogTitle>
             <DialogDescription>
-              Modifique los datos del tipo de producto
+              Modifique la información del tipo de producto seleccionado.
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={form.handleSubmit(handleEditProductType)} className="space-y-4">
+          <form onSubmit={editForm.handleSubmit(handleEditProductType)} className="space-y-4">
             <div>
               <Label htmlFor="edit-name">Nombre *</Label>
               <Input
-                id="edit-name"
-                {...form.register('name')}
-                placeholder="Ej: Lácteos"
+                {...editForm.register('name')}
+                placeholder="Ej: Materia Prima"
               />
-              {form.formState.errors.name && (
-                <p className="text-sm text-red-500 mt-1">{form.formState.errors.name.message}</p>
+              {editForm.formState.errors.name && (
+                <p className="text-sm text-destructive mt-1">
+                  {editForm.formState.errors.name.message}
+                </p>
               )}
             </div>
-            
+
             <div>
               <Label htmlFor="edit-code">Código *</Label>
               <Input
-                id="edit-code"
-                {...form.register('code')}
-                placeholder="Ej: LAC"
+                {...editForm.register('code')}
+                placeholder="Ej: MP"
               />
-              {form.formState.errors.code && (
-                <p className="text-sm text-red-500 mt-1">{form.formState.errors.code.message}</p>
+              {editForm.formState.errors.code && (
+                <p className="text-sm text-destructive mt-1">
+                  {editForm.formState.errors.code.message}
+                </p>
               )}
             </div>
-            
+
             <div>
               <Label htmlFor="edit-description">Descripción</Label>
               <Textarea
-                id="edit-description"
-                {...form.register('description')}
-                placeholder="Descripción opcional del tipo de producto"
-                rows={3}
+                {...editForm.register('description')}
+                placeholder="Descripción opcional del tipo"
               />
             </div>
-            
+
+            <div>
+              <Label htmlFor="edit-category">Categoría *</Label>
+              <Select 
+                value={editForm.watch('category')} 
+                onValueChange={(value) => editForm.setValue('category', value as any)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccione la categoría" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map(category => (
+                    <SelectItem key={category.value} value={category.value}>
+                      {category.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {editForm.formState.errors.category && (
+                <p className="text-sm text-destructive mt-1">
+                  {editForm.formState.errors.category.message}
+                </p>
+              )}
+            </div>
+
             <div>
               <Label htmlFor="edit-status">Estado</Label>
-              <select
-                id="edit-status"
-                {...form.register('status')}
-                className="w-full px-3 py-2 border border-input rounded-md"
+              <Select 
+                value={editForm.watch('status')} 
+                onValueChange={(value) => editForm.setValue('status', value as 'active' | 'inactive')}
               >
-                <option value="active">Activo</option>
-                <option value="inactive">Inactivo</option>
-              </select>
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccione el estado" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Activo</SelectItem>
+                  <SelectItem value="inactive">Inactivo</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-            
+
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
                 Cancelar
               </Button>
-              <Button type="submit">Guardar Cambios</Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? 'Guardando...' : 'Guardar Cambios'}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>

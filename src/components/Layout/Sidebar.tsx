@@ -1,52 +1,40 @@
+import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
-  ChevronLeft, 
-  ChevronRight,
   LayoutDashboard,
-  Users,
+  Archive,
   Building2,
   Package,
-  ShoppingCart,
-  Truck,
+  Tag,
+  Warehouse,
+  MapPin,
+  Scale,
+  Users,
+  CheckCircle,
   CreditCard,
+  ShoppingCart,
+  Plus,
+  ClipboardList,
+  FileText,
+  Truck,
+  QrCode,
+  Upload,
+  Factory,
+  Activity,
   Bell,
   Settings,
-  FileText,
   BarChart3,
-  Factory,
-  Warehouse,
-  ClipboardList,
-  QrCode,
-  AlertTriangle,
-  Calendar,
-  Archive,
-  Tag,
-  Scale,
-  MapPin,
-  Shield,
-  Activity,
-  TrendingUp,
-  PieChart,
-  Upload,
-  Plus,
-  CheckCircle,
-  Clock,
-  User,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
-
-interface SidebarProps {
-  isCollapsed: boolean;
-  onToggle: () => void;
-}
 
 interface MenuItem {
   title: string;
   href: string;
-  icon: any;
-  badge?: string;
+  icon: React.ComponentType<{ className?: string }>;
   children?: MenuItem[];
 }
 
@@ -169,8 +157,8 @@ const menuItems: MenuItem[] = [
       },
       {
         title: 'Pendientes',
-        href: '/payments/pending',
-        icon: Clock,
+        href: '/payments',
+        icon: ClipboardList,
       },
       {
         title: 'Historial',
@@ -191,7 +179,7 @@ const menuItems: MenuItem[] = [
       },
       {
         title: 'Nueva Orden',
-        href: '/production/new',
+        href: '/production/orders',
         icon: Plus,
       },
       {
@@ -210,56 +198,11 @@ const menuItems: MenuItem[] = [
     title: 'Notificaciones',
     href: '/notifications',
     icon: Bell,
-    badge: '3',
-    children: [
-      {
-        title: 'Alertas',
-        href: '/notifications/alerts',
-        icon: AlertTriangle,
-      },
-      {
-        title: 'Recordatorios',
-        href: '/notifications/reminders',
-        icon: Calendar,
-      },
-      {
-        title: 'Configuración',
-        href: '/notifications/settings',
-        icon: Settings,
-      },
-    ],
   },
   {
     title: 'Reportes',
     href: '/reports',
     icon: BarChart3,
-    children: [
-      {
-        title: 'Dashboard',
-        href: '/reports/dashboard',
-        icon: TrendingUp,
-      },
-      {
-        title: 'Inventario',
-        href: '/reports/inventory',
-        icon: PieChart,
-      },
-      {
-        title: 'Compras',
-        href: '/reports/purchases',
-        icon: ShoppingCart,
-      },
-      {
-        title: 'Producción',
-        href: '/reports/production',
-        icon: Factory,
-      },
-      {
-        title: 'Pagos',
-        href: '/reports/payments',
-        icon: CreditCard,
-      },
-    ],
   },
   {
     title: 'Administración',
@@ -272,16 +215,6 @@ const menuItems: MenuItem[] = [
         icon: Users,
       },
       {
-        title: 'Roles',
-        href: '/admin/roles',
-        icon: Shield,
-      },
-      {
-        title: 'Auditoría',
-        href: '/admin/audit',
-        icon: FileText,
-      },
-      {
         title: 'Configuración',
         href: '/admin/settings',
         icon: Settings,
@@ -290,42 +223,76 @@ const menuItems: MenuItem[] = [
   },
 ];
 
+interface SidebarProps {
+  isCollapsed: boolean;
+  onToggle: () => void;
+}
+
 export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
   const location = useLocation();
+  const [expandedItems, setExpandedItems] = useState<string[]>([]);
 
-  const renderMenuItem = (item: MenuItem, level: number = 0) => {
-    const isActive = location.pathname === item.href;
+  const toggleExpanded = (title: string) => {
+    setExpandedItems(prev => 
+      prev.includes(title) 
+        ? prev.filter(item => item !== title)
+        : [...prev, title]
+    );
+  };
+
+  const isActive = (href: string) => {
+    return location.pathname === href || location.pathname.startsWith(href + '/');
+  };
+
+  const renderMenuItem = (item: MenuItem) => {
+    const isExpanded = expandedItems.includes(item.title);
     const hasChildren = item.children && item.children.length > 0;
-    const isExpanded = hasChildren && location.pathname.startsWith(item.href);
+    const active = isActive(item.href);
 
     return (
-      <div key={item.href}>
-        <Link
-          to={item.href}
-          className={cn(
-            'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-            'hover:bg-accent hover:text-accent-foreground',
-            isActive && 'bg-accent text-accent-foreground',
-            level > 0 && 'ml-4',
-            isCollapsed && level === 0 && 'justify-center'
-          )}
-        >
-          <item.icon className={cn('h-4 w-4', isCollapsed && level === 0 && 'h-5 w-5')} />
-          {!isCollapsed && (
-            <>
-              <span className="flex-1">{item.title}</span>
-              {item.badge && (
-                <span className="ml-auto rounded-full bg-primary px-2 py-1 text-xs text-primary-foreground">
-                  {item.badge}
-                </span>
-              )}
-            </>
-          )}
+      <div key={item.title}>
+        <Link to={item.href}>
+          <Button
+            variant={active ? "secondary" : "ghost"}
+            className={cn(
+              "w-full justify-start",
+              isCollapsed ? "px-2" : "px-4",
+              active && "bg-secondary"
+            )}
+            onClick={() => {
+              if (hasChildren) {
+                toggleExpanded(item.title);
+              }
+            }}
+          >
+            <item.icon className={cn("h-4 w-4", isCollapsed ? "mr-0" : "mr-2")} />
+            {!isCollapsed && (
+              <>
+                <span className="flex-1 text-left">{item.title}</span>
+                {hasChildren && (
+                  <ChevronRight className={cn("h-4 w-4 transition-transform", isExpanded && "rotate-90")} />
+                )}
+              </>
+            )}
+          </Button>
         </Link>
         
-        {hasChildren && !isCollapsed && (
-          <div className={cn('ml-4 mt-1 space-y-1', isExpanded ? 'block' : 'hidden')}>
-            {item.children.map((child) => renderMenuItem(child, level + 1))}
+        {hasChildren && !isCollapsed && isExpanded && (
+          <div className="ml-4 mt-1 space-y-1">
+            {item.children!.map((child) => (
+              <Link key={child.href} to={child.href}>
+                <Button
+                  variant={isActive(child.href) ? "secondary" : "ghost"}
+                  className={cn(
+                    "w-full justify-start",
+                    "px-4 py-1 h-8 text-sm"
+                  )}
+                >
+                  <child.icon className="h-3 w-3 mr-2" />
+                  {child.title}
+                </Button>
+              </Link>
+            ))}
           </div>
         )}
       </div>
@@ -334,16 +301,13 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
 
   return (
     <div className={cn(
-      'flex h-full flex-col border-r bg-background',
-      isCollapsed ? 'w-16' : 'w-64'
+      "flex flex-col border-r bg-background transition-all duration-300",
+      isCollapsed ? "w-16" : "w-64"
     )}>
       {/* Header */}
-      <div className="flex h-16 items-center justify-between border-b px-4">
+      <div className="flex h-16 items-center justify-between px-4 border-b">
         {!isCollapsed && (
-          <div className="flex items-center gap-2">
-            <Factory className="h-6 w-6 text-primary" />
-            <span className="font-semibold">Rossi</span>
-          </div>
+          <h2 className="text-lg font-semibold">Inventarios Rossi</h2>
         )}
         <Button
           variant="ghost"
@@ -360,21 +324,11 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
       </div>
 
       {/* Navigation */}
-      <ScrollArea className="flex-1 px-3 py-4">
+      <ScrollArea className="flex-1 px-2 py-4">
         <nav className="space-y-2">
-          {menuItems.map((item) => renderMenuItem(item))}
+          {menuItems.map(renderMenuItem)}
         </nav>
       </ScrollArea>
-
-      {/* Footer */}
-      {!isCollapsed && (
-        <div className="border-t p-4">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <User className="h-4 w-4" />
-            <span>Usuario Actual</span>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

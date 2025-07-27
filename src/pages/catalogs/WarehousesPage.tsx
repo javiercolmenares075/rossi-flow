@@ -7,215 +7,194 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { 
   Plus, 
   Search, 
+  Filter, 
   Edit, 
   Trash2, 
-  Warehouse,
   MapPin,
   User,
   Package,
   CheckCircle,
-  XCircle,
-  AlertTriangle
+  XCircle
 } from 'lucide-react';
 
-// Schema de validación
+// Validation schema for warehouse
 const warehouseSchema = z.object({
   name: z.string().min(2, 'El nombre debe tener al menos 2 caracteres'),
-  location: z.string().min(5, 'La ubicación debe tener al menos 5 caracteres'),
-  responsible: z.string().min(2, 'El responsable es obligatorio'),
-  capacity: z.number().min(1, 'La capacidad debe ser mayor a 0'),
+  code: z.string().min(2, 'El código debe tener al menos 2 caracteres'),
+  address: z.string().min(5, 'La dirección debe tener al menos 5 caracteres'),
   description: z.string().optional(),
-  status: z.enum(['active', 'inactive'])
+  type: z.enum(['main', 'secondary', 'cold_storage', 'dry_storage']),
+  capacity: z.number().min(1, 'La capacidad debe ser mayor a 0'),
+  responsible: z.string().min(2, 'Debe especificar un responsable'),
+  status: z.enum(['active', 'inactive']).default('active')
 });
 
 type WarehouseFormData = z.infer<typeof warehouseSchema>;
 
-interface Warehouse {
-  id: string;
-  name: string;
-  location: string;
-  responsible: string;
-  capacity: number;
-  currentStock: number;
-  description?: string;
-  status: 'active' | 'inactive';
-  productCount: number;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-// Mock data
-const mockWarehouses: Warehouse[] = [
+// Mock data for development
+const mockWarehouses = [
   {
     id: '1',
     name: 'Almacén Principal',
-    location: 'Zona Industrial, Luque - Paraguay',
-    responsible: 'Juan Pérez',
-    capacity: 10000,
-    currentStock: 7500,
+    code: 'ALM-001',
+    address: 'Ruta 2 Km 45, San Lorenzo',
     description: 'Almacén principal para productos terminados',
+    type: 'main',
+    capacity: 1000,
+    responsible: 'Juan Pérez',
     status: 'active',
-    productCount: 15,
     createdAt: new Date('2024-01-10'),
     updatedAt: new Date('2024-01-15')
   },
   {
     id: '2',
-    name: 'Almacén Refrigerado',
-    location: 'Zona Industrial, Luque - Paraguay',
+    name: 'Cámara Frigorífica',
+    code: 'CF-001',
+    address: 'Ruta 2 Km 45, San Lorenzo',
+    description: 'Almacenamiento de productos refrigerados',
+    type: 'cold_storage',
+    capacity: 500,
     responsible: 'María González',
-    capacity: 5000,
-    currentStock: 3200,
-    description: 'Almacén refrigerado para productos lácteos',
     status: 'active',
-    productCount: 8,
     createdAt: new Date('2024-01-05'),
     updatedAt: new Date('2024-01-12')
   },
   {
     id: '3',
-    name: 'Almacén de Insumos',
-    location: 'Zona Industrial, Luque - Paraguay',
-    responsible: 'Carlos Rodríguez',
-    capacity: 3000,
-    currentStock: 1800,
-    description: 'Almacén para materias primas e insumos',
+    name: 'Almacén de Materias Primas',
+    code: 'MP-001',
+    address: 'Ruta 1 Km 30, Luque',
+    description: 'Almacenamiento de materias primas',
+    type: 'dry_storage',
+    capacity: 800,
+    responsible: 'Carlos López',
     status: 'active',
-    productCount: 12,
     createdAt: new Date('2024-01-08'),
-    updatedAt: new Date('2024-01-14')
+    updatedAt: new Date('2024-01-10')
   }
 ];
 
+const warehouseTypes = [
+  { value: 'main', label: 'Principal' },
+  { value: 'secondary', label: 'Secundario' },
+  { value: 'cold_storage', label: 'Cámara Frigorífica' },
+  { value: 'dry_storage', label: 'Almacén Seco' }
+];
+
 export function WarehousesPage() {
-  const [warehouses, setWarehouses] = useState<Warehouse[]>(mockWarehouses);
+  const [warehouses, setWarehouses] = useState(mockWarehouses);
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterType, setFilterType] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [selectedWarehouse, setSelectedWarehouse] = useState<Warehouse | null>(null);
+  const [selectedWarehouse, setSelectedWarehouse] = useState<any>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const form = useForm<WarehouseFormData>({
+  const createForm = useForm<WarehouseFormData>({
     resolver: zodResolver(warehouseSchema),
     defaultValues: {
-      name: '',
-      location: '',
-      responsible: '',
-      capacity: 0,
-      description: '',
-      status: 'active'
+      status: 'active',
+      type: 'main',
+      capacity: 100
     }
+  });
+
+  const editForm = useForm<WarehouseFormData>({
+    resolver: zodResolver(warehouseSchema)
   });
 
   const filteredWarehouses = warehouses.filter(warehouse => {
     const matchesSearch = warehouse.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         warehouse.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         warehouse.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          warehouse.responsible.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesType = filterType === 'all' || warehouse.type === filterType;
     const matchesStatus = filterStatus === 'all' || warehouse.status === filterStatus;
     
-    return matchesSearch && matchesStatus;
+    return matchesSearch && matchesType && matchesStatus;
   });
 
-  const handleCreateWarehouse = (data: WarehouseFormData) => {
-    const newWarehouse: Warehouse = {
-      id: `wh-${Date.now()}`,
-      ...data,
-      currentStock: 0,
-      productCount: 0,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-    
-    setWarehouses([...warehouses, newWarehouse]);
-    setIsCreateDialogOpen(false);
-    form.reset();
-  };
-
-  const handleEditWarehouse = (data: WarehouseFormData) => {
-    if (!selectedWarehouse) return;
-    
-    const updatedWarehouses = warehouses.map(warehouse => 
-      warehouse.id === selectedWarehouse.id 
-        ? { ...warehouse, ...data, updatedAt: new Date() }
-        : warehouse
-    );
-    
-    setWarehouses(updatedWarehouses);
-    setIsEditDialogOpen(false);
-    setSelectedWarehouse(null);
-    form.reset();
-  };
-
   const handleDeleteWarehouse = (id: string) => {
-    const warehouse = warehouses.find(w => w.id === id);
-    if (warehouse && warehouse.currentStock > 0) {
-      alert('No se puede eliminar un almacén que tiene stock');
-      return;
-    }
-    
     setWarehouses(warehouses.filter(warehouse => warehouse.id !== id));
   };
 
-  const openEditDialog = (warehouse: Warehouse) => {
+  const handleCreateWarehouse = async (data: WarehouseFormData) => {
+    setIsSubmitting(true);
+    try {
+      const newWarehouse = {
+        id: Date.now().toString(),
+        ...data,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      setWarehouses([...warehouses, newWarehouse]);
+      setIsCreateDialogOpen(false);
+      createForm.reset();
+    } catch (error) {
+      console.error('Error creating warehouse:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleEditWarehouse = async (data: WarehouseFormData) => {
+    if (!selectedWarehouse) return;
+    
+    setIsSubmitting(true);
+    try {
+      const updatedWarehouse = {
+        ...selectedWarehouse,
+        ...data,
+        updatedAt: new Date()
+      };
+      setWarehouses(warehouses.map(w => w.id === selectedWarehouse.id ? updatedWarehouse : w));
+      setIsEditDialogOpen(false);
+      setSelectedWarehouse(null);
+      editForm.reset();
+    } catch (error) {
+      console.error('Error updating warehouse:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const openEditDialog = (warehouse: any) => {
     setSelectedWarehouse(warehouse);
-    form.reset({
+    editForm.reset({
       name: warehouse.name,
-      location: warehouse.location,
-      responsible: warehouse.responsible,
+      code: warehouse.code,
+      address: warehouse.address,
+      description: warehouse.description,
+      type: warehouse.type,
       capacity: warehouse.capacity,
-      description: warehouse.description || '',
+      responsible: warehouse.responsible,
       status: warehouse.status
     });
     setIsEditDialogOpen(true);
   };
 
-  const getStatusBadge = (status: string) => {
-    return status === 'active' ? (
-      <Badge variant="default" className="bg-green-100 text-green-800">
-        <CheckCircle className="h-3 w-3 mr-1" />
-        Activo
-      </Badge>
-    ) : (
-      <Badge variant="secondary" className="bg-gray-100 text-gray-800">
-        <XCircle className="h-3 w-3 mr-1" />
-        Inactivo
+  const getTypeBadge = (type: string) => {
+    const warehouseType = warehouseTypes.find(t => t.value === type);
+    return (
+      <Badge variant="outline">
+        {warehouseType?.label || type}
       </Badge>
     );
   };
 
-  const getCapacityBadge = (warehouse: Warehouse) => {
-    const percentage = (warehouse.currentStock / warehouse.capacity) * 100;
-    
-    if (percentage >= 90) {
-      return (
-        <Badge variant="destructive" className="bg-red-100 text-red-800">
-          <AlertTriangle className="h-3 w-3 mr-1" />
-          {percentage.toFixed(1)}%
-        </Badge>
-      );
-    } else if (percentage >= 70) {
-      return (
-        <Badge variant="default" className="bg-yellow-100 text-yellow-800">
-          {percentage.toFixed(1)}%
-        </Badge>
-      );
-    } else {
-      return (
-        <Badge variant="outline" className="bg-green-100 text-green-800">
-          {percentage.toFixed(1)}%
-        </Badge>
-      );
-    }
-  };
-
-  const formatNumber = (num: number) => {
-    return new Intl.NumberFormat('es-PY').format(num);
+  const getStatusBadge = (status: string) => {
+    return (
+      <Badge variant={status === 'active' ? 'default' : 'destructive'}>
+        {status === 'active' ? 'Activo' : 'Inactivo'}
+      </Badge>
+    );
   };
 
   return (
@@ -225,7 +204,7 @@ export function WarehousesPage() {
         <div>
           <h1 className="text-3xl font-bold">Almacenes</h1>
           <p className="text-muted-foreground">
-            Gestión de almacenes físicos y virtuales
+            Gestión de ubicaciones físicas y responsables de almacenamiento
           </p>
         </div>
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
@@ -235,95 +214,159 @@ export function WarehousesPage() {
               Nuevo Almacén
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-w-2xl">
             <DialogHeader>
-              <DialogTitle>Crear Almacén</DialogTitle>
+              <DialogTitle>Crear Nuevo Almacén</DialogTitle>
               <DialogDescription>
-                Agregue un nuevo almacén al sistema
+                Complete la información del almacén. Los campos marcados con * son obligatorios.
               </DialogDescription>
             </DialogHeader>
-            <form onSubmit={form.handleSubmit(handleCreateWarehouse)} className="space-y-4">
-              <div>
-                <Label htmlFor="name">Nombre *</Label>
-                <Input
-                  id="name"
-                  {...form.register('name')}
-                  placeholder="Ej: Almacén Principal"
-                />
-                {form.formState.errors.name && (
-                  <p className="text-sm text-red-500 mt-1">{form.formState.errors.name.message}</p>
-                )}
+            <form onSubmit={createForm.handleSubmit(handleCreateWarehouse)} className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <Label htmlFor="name">Nombre *</Label>
+                  <Input
+                    {...createForm.register('name')}
+                    placeholder="Ej: Almacén Principal"
+                  />
+                  {createForm.formState.errors.name && (
+                    <p className="text-sm text-destructive mt-1">
+                      {createForm.formState.errors.name.message}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <Label htmlFor="code">Código *</Label>
+                  <Input
+                    {...createForm.register('code')}
+                    placeholder="Ej: ALM-001"
+                  />
+                  {createForm.formState.errors.code && (
+                    <p className="text-sm text-destructive mt-1">
+                      {createForm.formState.errors.code.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="md:col-span-2">
+                  <Label htmlFor="address">Dirección *</Label>
+                  <Textarea
+                    {...createForm.register('address')}
+                    placeholder="Dirección completa del almacén"
+                  />
+                  {createForm.formState.errors.address && (
+                    <p className="text-sm text-destructive mt-1">
+                      {createForm.formState.errors.address.message}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <Label htmlFor="type">Tipo *</Label>
+                  <Select 
+                    value={createForm.watch('type')} 
+                    onValueChange={(value) => createForm.setValue('type', value as any)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccione el tipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {warehouseTypes.map(type => (
+                        <SelectItem key={type.value} value={type.value}>
+                          {type.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {createForm.formState.errors.type && (
+                    <p className="text-sm text-destructive mt-1">
+                      {createForm.formState.errors.type.message}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <Label htmlFor="capacity">Capacidad (m³) *</Label>
+                  <Input
+                    {...createForm.register('capacity', { valueAsNumber: true })}
+                    type="number"
+                    placeholder="1000"
+                  />
+                  {createForm.formState.errors.capacity && (
+                    <p className="text-sm text-destructive mt-1">
+                      {createForm.formState.errors.capacity.message}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <Label htmlFor="responsible">Responsable *</Label>
+                  <Input
+                    {...createForm.register('responsible')}
+                    placeholder="Nombre del responsable"
+                  />
+                  {createForm.formState.errors.responsible && (
+                    <p className="text-sm text-destructive mt-1">
+                      {createForm.formState.errors.responsible.message}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <Label htmlFor="status">Estado</Label>
+                  <Select 
+                    value={createForm.watch('status')} 
+                    onValueChange={(value) => createForm.setValue('status', value as 'active' | 'inactive')}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccione el estado" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">Activo</SelectItem>
+                      <SelectItem value="inactive">Inactivo</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="md:col-span-2">
+                  <Label htmlFor="description">Descripción</Label>
+                  <Textarea
+                    {...createForm.register('description')}
+                    placeholder="Descripción opcional del almacén"
+                  />
+                </div>
               </div>
-              
-              <div>
-                <Label htmlFor="location">Ubicación *</Label>
-                <Input
-                  id="location"
-                  {...form.register('location')}
-                  placeholder="Ej: Zona Industrial, Luque"
-                />
-                {form.formState.errors.location && (
-                  <p className="text-sm text-red-500 mt-1">{form.formState.errors.location.message}</p>
-                )}
-              </div>
-              
-              <div>
-                <Label htmlFor="responsible">Responsable *</Label>
-                <Input
-                  id="responsible"
-                  {...form.register('responsible')}
-                  placeholder="Ej: Juan Pérez"
-                />
-                {form.formState.errors.responsible && (
-                  <p className="text-sm text-red-500 mt-1">{form.formState.errors.responsible.message}</p>
-                )}
-              </div>
-              
-              <div>
-                <Label htmlFor="capacity">Capacidad *</Label>
-                <Input
-                  id="capacity"
-                  type="number"
-                  {...form.register('capacity', { valueAsNumber: true })}
-                  placeholder="Ej: 10000"
-                />
-                {form.formState.errors.capacity && (
-                  <p className="text-sm text-red-500 mt-1">{form.formState.errors.capacity.message}</p>
-                )}
-              </div>
-              
-              <div>
-                <Label htmlFor="description">Descripción</Label>
-                <Textarea
-                  id="description"
-                  {...form.register('description')}
-                  placeholder="Descripción opcional del almacén"
-                  rows={3}
-                />
-              </div>
-              
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
                   Cancelar
                 </Button>
-                <Button type="submit">Crear Almacén</Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? 'Creando...' : 'Crear Almacén'}
+                </Button>
               </DialogFooter>
             </form>
           </DialogContent>
         </Dialog>
       </div>
 
-      {/* Filtros */}
+      {/* Filters */}
       <Card>
-        <CardContent className="pt-6">
-          <div className="flex gap-4">
-            <div className="flex-1">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Filter className="h-5 w-5" />
+            Filtros
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-4">
+            <div>
               <Label htmlFor="search">Buscar</Label>
               <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="search"
-                  placeholder="Buscar por nombre, ubicación o responsable..."
+                  placeholder="Buscar por nombre, código o responsable..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
@@ -331,40 +374,54 @@ export function WarehousesPage() {
               </div>
             </div>
             <div>
-              <Label htmlFor="status">Estado</Label>
-              <select
-                id="status"
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-                className="w-full px-3 py-2 border border-input rounded-md"
-              >
-                <option value="all">Todos</option>
-                <option value="active">Activos</option>
-                <option value="inactive">Inactivos</option>
-              </select>
+              <Label htmlFor="filterType">Tipo</Label>
+              <Select value={filterType} onValueChange={setFilterType}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos los tipos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  {warehouseTypes.map(type => (
+                    <SelectItem key={type.value} value={type.value}>
+                      {type.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="filterStatus">Estado</Label>
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos los estados" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="active">Activo</SelectItem>
+                  <SelectItem value="inactive">Inactivo</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Tabla */}
+      {/* Warehouses Table */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Warehouse className="h-5 w-5" />
-            Almacenes ({filteredWarehouses.length})
-          </CardTitle>
+          <CardTitle>Lista de Almacenes</CardTitle>
+          <CardDescription>
+            {filteredWarehouses.length} almacenes encontrados
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Nombre</TableHead>
-                <TableHead>Ubicación</TableHead>
+                <TableHead>Almacén</TableHead>
+                <TableHead>Tipo</TableHead>
                 <TableHead>Responsable</TableHead>
                 <TableHead>Capacidad</TableHead>
-                <TableHead>Stock Actual</TableHead>
-                <TableHead>Productos</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead>Acciones</TableHead>
               </TableRow>
@@ -372,48 +429,39 @@ export function WarehousesPage() {
             <TableBody>
               {filteredWarehouses.map((warehouse) => (
                 <TableRow key={warehouse.id}>
-                  <TableCell className="font-medium">{warehouse.name}</TableCell>
-                  <TableCell className="text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <MapPin className="h-3 w-3" />
-                      {warehouse.location}
+                  <TableCell>
+                    <div>
+                      <div className="font-medium">{warehouse.name}</div>
+                      <div className="text-sm text-muted-foreground">{warehouse.code}</div>
+                      <div className="text-sm text-muted-foreground max-w-xs truncate">
+                        {warehouse.address}
+                      </div>
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-1">
-                      <User className="h-3 w-3" />
-                      {warehouse.responsible}
-                    </div>
+                    {getTypeBadge(warehouse.type)}
                   </TableCell>
-                  <TableCell>{formatNumber(warehouse.capacity)}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      <span>{formatNumber(warehouse.currentStock)}</span>
-                      {getCapacityBadge(warehouse)}
+                      <User className="h-4 w-4" />
+                      <span className="text-sm">{warehouse.responsible}</span>
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline">
-                      <Package className="h-3 w-3 mr-1" />
-                      {warehouse.productCount}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Package className="h-4 w-4" />
+                      <span className="text-sm">{warehouse.capacity} m³</span>
+                    </div>
                   </TableCell>
-                  <TableCell>{getStatusBadge(warehouse.status)}</TableCell>
                   <TableCell>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => openEditDialog(warehouse)}
-                      >
+                    {getStatusBadge(warehouse.status)}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Button variant="ghost" size="sm" onClick={() => openEditDialog(warehouse)}>
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeleteWarehouse(warehouse.id)}
-                        disabled={warehouse.currentStock > 0}
-                      >
+                      <Button variant="ghost" size="sm" onClick={() => handleDeleteWarehouse(warehouse.id)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
@@ -425,92 +473,138 @@ export function WarehousesPage() {
         </CardContent>
       </Card>
 
-      {/* Dialog de Edición */}
+      {/* Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Editar Almacén</DialogTitle>
             <DialogDescription>
-              Modifique los datos del almacén
+              Modifique la información del almacén seleccionado.
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={form.handleSubmit(handleEditWarehouse)} className="space-y-4">
-            <div>
-              <Label htmlFor="edit-name">Nombre *</Label>
-              <Input
-                id="edit-name"
-                {...form.register('name')}
-                placeholder="Ej: Almacén Principal"
-              />
-              {form.formState.errors.name && (
-                <p className="text-sm text-red-500 mt-1">{form.formState.errors.name.message}</p>
-              )}
+          <form onSubmit={editForm.handleSubmit(handleEditWarehouse)} className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <Label htmlFor="edit-name">Nombre *</Label>
+                <Input
+                  {...editForm.register('name')}
+                  placeholder="Ej: Almacén Principal"
+                />
+                {editForm.formState.errors.name && (
+                  <p className="text-sm text-destructive mt-1">
+                    {editForm.formState.errors.name.message}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <Label htmlFor="edit-code">Código *</Label>
+                <Input
+                  {...editForm.register('code')}
+                  placeholder="Ej: ALM-001"
+                />
+                {editForm.formState.errors.code && (
+                  <p className="text-sm text-destructive mt-1">
+                    {editForm.formState.errors.code.message}
+                  </p>
+                )}
+              </div>
+
+              <div className="md:col-span-2">
+                <Label htmlFor="edit-address">Dirección *</Label>
+                <Textarea
+                  {...editForm.register('address')}
+                  placeholder="Dirección completa del almacén"
+                />
+                {editForm.formState.errors.address && (
+                  <p className="text-sm text-destructive mt-1">
+                    {editForm.formState.errors.address.message}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <Label htmlFor="edit-type">Tipo *</Label>
+                <Select 
+                  value={editForm.watch('type')} 
+                  onValueChange={(value) => editForm.setValue('type', value as any)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccione el tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {warehouseTypes.map(type => (
+                      <SelectItem key={type.value} value={type.value}>
+                        {type.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {editForm.formState.errors.type && (
+                  <p className="text-sm text-destructive mt-1">
+                    {editForm.formState.errors.type.message}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <Label htmlFor="edit-capacity">Capacidad (m³) *</Label>
+                <Input
+                  {...editForm.register('capacity', { valueAsNumber: true })}
+                  type="number"
+                  placeholder="1000"
+                />
+                {editForm.formState.errors.capacity && (
+                  <p className="text-sm text-destructive mt-1">
+                    {editForm.formState.errors.capacity.message}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <Label htmlFor="edit-responsible">Responsable *</Label>
+                <Input
+                  {...editForm.register('responsible')}
+                  placeholder="Nombre del responsable"
+                />
+                {editForm.formState.errors.responsible && (
+                  <p className="text-sm text-destructive mt-1">
+                    {editForm.formState.errors.responsible.message}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <Label htmlFor="edit-status">Estado</Label>
+                <Select 
+                  value={editForm.watch('status')} 
+                  onValueChange={(value) => editForm.setValue('status', value as 'active' | 'inactive')}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccione el estado" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Activo</SelectItem>
+                    <SelectItem value="inactive">Inactivo</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="md:col-span-2">
+                <Label htmlFor="edit-description">Descripción</Label>
+                <Textarea
+                  {...editForm.register('description')}
+                  placeholder="Descripción opcional del almacén"
+                />
+              </div>
             </div>
-            
-            <div>
-              <Label htmlFor="edit-location">Ubicación *</Label>
-              <Input
-                id="edit-location"
-                {...form.register('location')}
-                placeholder="Ej: Zona Industrial, Luque"
-              />
-              {form.formState.errors.location && (
-                <p className="text-sm text-red-500 mt-1">{form.formState.errors.location.message}</p>
-              )}
-            </div>
-            
-            <div>
-              <Label htmlFor="edit-responsible">Responsable *</Label>
-              <Input
-                id="edit-responsible"
-                {...form.register('responsible')}
-                placeholder="Ej: Juan Pérez"
-              />
-              {form.formState.errors.responsible && (
-                <p className="text-sm text-red-500 mt-1">{form.formState.errors.responsible.message}</p>
-              )}
-            </div>
-            
-            <div>
-              <Label htmlFor="edit-capacity">Capacidad *</Label>
-              <Input
-                id="edit-capacity"
-                type="number"
-                {...form.register('capacity', { valueAsNumber: true })}
-                placeholder="Ej: 10000"
-              />
-              {form.formState.errors.capacity && (
-                <p className="text-sm text-red-500 mt-1">{form.formState.errors.capacity.message}</p>
-              )}
-            </div>
-            
-            <div>
-              <Label htmlFor="edit-description">Descripción</Label>
-              <Textarea
-                id="edit-description"
-                {...form.register('description')}
-                placeholder="Descripción opcional del almacén"
-                rows={3}
-              />
-            </div>
-            
-            <div>
-              <Label htmlFor="edit-status">Estado</Label>
-              <select
-                id="edit-status"
-                {...form.register('status')}
-                className="w-full px-3 py-2 border border-input rounded-md"
-              >
-                <option value="active">Activo</option>
-                <option value="inactive">Inactivo</option>
-              </select>
-            </div>
-            
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
                 Cancelar
               </Button>
-              <Button type="submit">Guardar Cambios</Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? 'Guardando...' : 'Guardar Cambios'}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>

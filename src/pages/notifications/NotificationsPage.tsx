@@ -1,180 +1,129 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Switch } from '@/components/ui/switch';
 import { 
-  Bell, 
-  AlertTriangle, 
-  CheckCircle, 
-  Clock, 
-  Package, 
+  Plus, 
+  Search, 
+  Filter, 
+  Edit, 
+  Trash2, 
+  Eye, 
+  Bell,
+  AlertTriangle,
+  CheckCircle,
+  Clock,
+  Package,
   DollarSign,
   Calendar,
-  Settings,
-  Trash2,
-  Eye,
-  EyeOff,
-  Filter,
-  Search,
-  Plus,
-  RefreshCw,
-  Download,
-  Archive
+  Mail,
+  MessageSquare,
+  Settings
 } from 'lucide-react';
 
+// Types
 interface Notification {
   id: string;
-  type: 'stock_low' | 'expiry_warning' | 'payment_due' | 'production_alert' | 'import_alert' | 'manual';
+  type: 'low_stock' | 'expiry' | 'payment' | 'import' | 'manual';
   title: string;
   message: string;
   priority: 'low' | 'medium' | 'high' | 'critical';
-  status: 'unread' | 'read' | 'archived';
+  status: 'unread' | 'read';
+  relatedEntity?: {
+    type: 'product' | 'batch' | 'purchase_order' | 'payment';
+    id: string;
+    name: string;
+  };
   createdAt: Date;
   readAt?: Date;
-  archivedAt?: Date;
-  metadata?: {
-    productId?: string;
-    productName?: string;
-    batchId?: string;
-    orderId?: string;
-    providerName?: string;
-    amount?: number;
-    daysUntilExpiry?: number;
-    currentStock?: number;
-    minStock?: number;
-  };
-}
-
-interface NotificationSettings {
-  stockAlerts: boolean;
-  expiryAlerts: boolean;
-  paymentAlerts: boolean;
-  productionAlerts: boolean;
-  importAlerts: boolean;
-  emailNotifications: boolean;
-  pushNotifications: boolean;
-  lowStockThreshold: number;
-  expiryWarningDays: number;
-  paymentReminderDays: number;
 }
 
 // Mock data
 const mockNotifications: Notification[] = [
   {
     id: '1',
-    type: 'stock_low',
+    type: 'low_stock',
     title: 'Stock Bajo - Leche Entera',
-    message: 'El producto Leche Entera (LEC-001) tiene stock bajo. Actual: 50 litros, Mínimo: 100 litros',
+    message: 'El producto Leche Entera (LEC-001) tiene stock bajo. Cantidad actual: 50 litros, mínimo: 100 litros',
     priority: 'high',
     status: 'unread',
-    createdAt: new Date('2024-01-25T10:30:00'),
-    metadata: {
-      productId: '1',
-      productName: 'Leche Entera',
-      currentStock: 50,
-      minStock: 100
-    }
+    relatedEntity: {
+      type: 'product',
+      id: '1',
+      name: 'Leche Entera'
+    },
+    createdAt: new Date('2024-01-20T10:30:00')
   },
   {
     id: '2',
-    type: 'expiry_warning',
+    type: 'expiry',
     title: 'Vencimiento Próximo - Queso Paraguay',
-    message: 'El lote QUE-2024-001 de Queso Paraguay vence en 5 días',
-    priority: 'medium',
+    message: 'El lote LOT-2024-001 de Queso Paraguay vence en 5 días',
+    priority: 'critical',
     status: 'unread',
-    createdAt: new Date('2024-01-25T09:15:00'),
-    metadata: {
-      productId: '2',
-      productName: 'Queso Paraguay',
-      batchId: 'QUE-2024-001',
-      daysUntilExpiry: 5
-    }
+    relatedEntity: {
+      type: 'batch',
+      id: '1',
+      name: 'LOT-2024-001'
+    },
+    createdAt: new Date('2024-01-20T09:15:00')
   },
   {
     id: '3',
-    type: 'payment_due',
-    title: 'Pago Vencido - Lácteos del Sur S.A.',
-    message: 'La orden OC-2024-001 tiene un pago vencido de ₲750,000',
-    priority: 'critical',
-    status: 'unread',
-    createdAt: new Date('2024-01-25T08:45:00'),
-    metadata: {
-      orderId: 'OC-2024-001',
-      providerName: 'Lácteos del Sur S.A.',
-      amount: 750000
-    }
+    type: 'payment',
+    title: 'Pago Próximo - Orden OC-2024-001',
+    message: 'La orden de compra OC-2024-001 tiene pago programado para mañana',
+    priority: 'medium',
+    status: 'read',
+    relatedEntity: {
+      type: 'purchase_order',
+      id: '1',
+      name: 'OC-2024-001'
+    },
+    createdAt: new Date('2024-01-19T14:20:00'),
+    readAt: new Date('2024-01-19T15:30:00')
   },
   {
     id: '4',
-    type: 'production_alert',
-    title: 'Producción Completada - Yogur Natural',
-    message: 'La orden de producción OP-2024-002 ha sido completada exitosamente',
-    priority: 'low',
-    status: 'read',
-    createdAt: new Date('2024-01-24T16:20:00'),
-    readAt: new Date('2024-01-24T16:25:00'),
-    metadata: {
-      productName: 'Yogur Natural'
-    }
-  },
-  {
-    id: '5',
-    type: 'import_alert',
-    title: 'Importación Programada - Cultivo Láctico',
-    message: 'Se ha programado la importación de cultivo láctico para mañana',
-    priority: 'medium',
-    status: 'read',
-    createdAt: new Date('2024-01-24T14:30:00'),
-    readAt: new Date('2024-01-24T15:00:00'),
-    metadata: {
-      productName: 'Cultivo Láctico'
-    }
-  },
-  {
-    id: '6',
     type: 'manual',
-    title: 'Recordatorio - Inventario Mensual',
-    message: 'Recordatorio: Realizar inventario físico mensual el próximo lunes',
-    priority: 'medium',
+    title: 'Recordatorio - Revisión de Inventario',
+    message: 'Recordatorio: Revisión mensual de inventario programada para el 25 de enero',
+    priority: 'low',
     status: 'unread',
-    createdAt: new Date('2024-01-24T12:00:00')
+    createdAt: new Date('2024-01-18T16:45:00')
   }
 ];
 
-const mockSettings: NotificationSettings = {
-  stockAlerts: true,
-  expiryAlerts: true,
-  paymentAlerts: true,
-  productionAlerts: true,
-  importAlerts: true,
-  emailNotifications: true,
-  pushNotifications: false,
-  lowStockThreshold: 20,
-  expiryWarningDays: 7,
-  paymentReminderDays: 3
-};
+const notificationTypes = [
+  { value: 'low_stock', label: 'Stock Bajo', icon: Package },
+  { value: 'expiry', label: 'Vencimientos', icon: Calendar },
+  { value: 'payment', label: 'Pagos', icon: DollarSign },
+  { value: 'import', label: 'Importaciones', icon: Package },
+  { value: 'manual', label: 'Manuales', icon: Bell }
+];
+
+const priorities = [
+  { value: 'low', label: 'Baja', color: 'bg-blue-100 text-blue-800' },
+  { value: 'medium', label: 'Media', color: 'bg-yellow-100 text-yellow-800' },
+  { value: 'high', label: 'Alta', color: 'bg-orange-100 text-orange-800' },
+  { value: 'critical', label: 'Crítica', color: 'bg-red-100 text-red-800' }
+];
 
 export function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>(mockNotifications);
-  const [settings, setSettings] = useState<NotificationSettings>(mockSettings);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
   const [filterPriority, setFilterPriority] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
-  const [isSettingsDialogOpen, setIsSettingsDialogOpen] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [newNotification, setNewNotification] = useState({
-    title: '',
-    message: '',
-    type: 'manual' as Notification['type'],
-    priority: 'medium' as Notification['priority']
-  });
-
-  const unreadCount = notifications.filter(n => n.status === 'unread').length;
-  const criticalCount = notifications.filter(n => n.priority === 'critical' && n.status === 'unread').length;
+  const [isSettingsDialogOpen, setIsSettingsDialogOpen] = useState(false);
 
   const filteredNotifications = notifications.filter(notification => {
     const matchesSearch = notification.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -186,161 +135,65 @@ export function NotificationsPage() {
     return matchesSearch && matchesType && matchesPriority && matchesStatus;
   });
 
+  const unreadCount = notifications.filter(n => n.status === 'unread').length;
+  const criticalCount = notifications.filter(n => n.priority === 'critical' && n.status === 'unread').length;
+
   const handleMarkAsRead = (id: string) => {
     setNotifications(notifications.map(notification => 
       notification.id === id 
-        ? { ...notification, status: 'read', readAt: new Date() }
+        ? { ...notification, status: 'read' as const, readAt: new Date() }
         : notification
     ));
-  };
-
-  const handleMarkAsUnread = (id: string) => {
-    setNotifications(notifications.map(notification => 
-      notification.id === id 
-        ? { ...notification, status: 'unread', readAt: undefined }
-        : notification
-    ));
-  };
-
-  const handleArchive = (id: string) => {
-    setNotifications(notifications.map(notification => 
-      notification.id === id 
-        ? { ...notification, status: 'archived', archivedAt: new Date() }
-        : notification
-    ));
-  };
-
-  const handleDelete = (id: string) => {
-    setNotifications(notifications.filter(notification => notification.id !== id));
-  };
-
-  const handleCreateNotification = () => {
-    const newNotif: Notification = {
-      id: `notif-${Date.now()}`,
-      type: newNotification.type,
-      title: newNotification.title,
-      message: newNotification.message,
-      priority: newNotification.priority,
-      status: 'unread',
-      createdAt: new Date()
-    };
-    
-    setNotifications([newNotif, ...notifications]);
-    setNewNotification({ title: '', message: '', type: 'manual', priority: 'medium' });
-    setIsCreateDialogOpen(false);
   };
 
   const handleMarkAllAsRead = () => {
     setNotifications(notifications.map(notification => 
-      notification.status === 'unread' 
-        ? { ...notification, status: 'read', readAt: new Date() }
+      notification.status === 'unread'
+        ? { ...notification, status: 'read' as const, readAt: new Date() }
         : notification
     ));
   };
 
-  const handleArchiveAll = () => {
-    setNotifications(notifications.map(notification => 
-      notification.status === 'read' 
-        ? { ...notification, status: 'archived', archivedAt: new Date() }
-        : notification
-    ));
+  const handleDeleteNotification = (id: string) => {
+    setNotifications(notifications.filter(notification => notification.id !== id));
   };
 
   const getPriorityBadge = (priority: string) => {
-    switch (priority) {
-      case 'critical':
-        return (
-          <Badge variant="destructive" className="bg-red-100 text-red-800">
-            Crítico
-          </Badge>
-        );
-      case 'high':
-        return (
-          <Badge variant="default" className="bg-orange-100 text-orange-800">
-            Alto
-          </Badge>
-        );
-      case 'medium':
-        return (
-          <Badge variant="outline" className="bg-yellow-100 text-yellow-800">
-            Medio
-          </Badge>
-        );
-      case 'low':
-        return (
-          <Badge variant="secondary" className="bg-green-100 text-green-800">
-            Bajo
-          </Badge>
-        );
-      default:
-        return null;
-    }
+    const priorityConfig = priorities.find(p => p.value === priority);
+    return (
+      <Badge className={priorityConfig?.color}>
+        {priorityConfig?.label}
+      </Badge>
+    );
   };
 
   const getTypeIcon = (type: string) => {
-    switch (type) {
-      case 'stock_low':
-        return <Package className="h-4 w-4 text-red-500" />;
-      case 'expiry_warning':
-        return <Calendar className="h-4 w-4 text-orange-500" />;
-      case 'payment_due':
-        return <DollarSign className="h-4 w-4 text-red-500" />;
-      case 'production_alert':
-        return <AlertTriangle className="h-4 w-4 text-blue-500" />;
-      case 'import_alert':
-        return <Package className="h-4 w-4 text-purple-500" />;
-      case 'manual':
-        return <Bell className="h-4 w-4 text-gray-500" />;
+    const typeConfig = notificationTypes.find(t => t.value === type);
+    const Icon = typeConfig?.icon || Bell;
+    return <Icon className="h-4 w-4" />;
+  };
+
+  const getPriorityIcon = (priority: string) => {
+    switch (priority) {
+      case 'critical':
+        return <AlertTriangle className="h-4 w-4 text-red-600" />;
+      case 'high':
+        return <AlertTriangle className="h-4 w-4 text-orange-600" />;
+      case 'medium':
+        return <Clock className="h-4 w-4 text-yellow-600" />;
       default:
-        return <Bell className="h-4 w-4" />;
+        return <CheckCircle className="h-4 w-4 text-blue-600" />;
     }
   };
 
-  const getTypeLabel = (type: string) => {
-    switch (type) {
-      case 'stock_low':
-        return 'Stock Bajo';
-      case 'expiry_warning':
-        return 'Vencimiento';
-      case 'payment_due':
-        return 'Pago';
-      case 'production_alert':
-        return 'Producción';
-      case 'import_alert':
-        return 'Importación';
-      case 'manual':
-        return 'Manual';
-      default:
-        return 'Otro';
-    }
-  };
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'unread':
-        return (
-          <Badge variant="default" className="bg-blue-100 text-blue-800">
-            <Eye className="h-3 w-3 mr-1" />
-            No Leída
-          </Badge>
-        );
-      case 'read':
-        return (
-          <Badge variant="outline" className="bg-gray-100 text-gray-600">
-            <EyeOff className="h-3 w-3 mr-1" />
-            Leída
-          </Badge>
-        );
-      case 'archived':
-        return (
-          <Badge variant="secondary" className="bg-gray-100 text-gray-500">
-            <Archive className="h-3 w-3 mr-1" />
-            Archivada
-          </Badge>
-        );
-      default:
-        return null;
-    }
+  const formatDate = (date: Date) => {
+    return new Intl.DateTimeFormat('es-PY', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(date);
   };
 
   return (
@@ -350,17 +203,13 @@ export function NotificationsPage() {
         <div>
           <h1 className="text-3xl font-bold">Notificaciones</h1>
           <p className="text-muted-foreground">
-            Sistema de alertas y notificaciones inteligentes
+            Gestión de alertas, recordatorios y notificaciones del sistema
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={handleMarkAllAsRead}>
-            <CheckCircle className="h-4 w-4 mr-2" />
-            Marcar Todo como Leído
-          </Button>
-          <Button variant="outline" onClick={handleArchiveAll}>
-            <Archive className="h-4 w-4 mr-2" />
-            Archivar Leídas
+          <Button variant="outline" onClick={() => setIsSettingsDialogOpen(true)}>
+            <Settings className="h-4 w-4 mr-2" />
+            Configuración
           </Button>
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
@@ -369,203 +218,51 @@ export function NotificationsPage() {
                 Nueva Notificación
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-w-md">
               <DialogHeader>
                 <DialogTitle>Crear Notificación Manual</DialogTitle>
                 <DialogDescription>
-                  Cree una notificación manual para recordatorios
+                  Cree una notificación manual para recordatorios personalizados
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
                 <div>
-                  <label className="text-sm font-medium">Título</label>
-                  <input
-                    type="text"
-                    value={newNotification.title}
-                    onChange={(e) => setNewNotification({...newNotification, title: e.target.value})}
-                    className="w-full px-3 py-2 border border-input rounded-md"
+                  <Label htmlFor="title">Título *</Label>
+                  <Input
+                    id="title"
                     placeholder="Título de la notificación"
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium">Mensaje</label>
-                  <textarea
-                    value={newNotification.message}
-                    onChange={(e) => setNewNotification({...newNotification, message: e.target.value})}
-                    className="w-full px-3 py-2 border border-input rounded-md"
+                  <Label htmlFor="message">Mensaje *</Label>
+                  <Textarea
+                    id="message"
+                    placeholder="Descripción detallada..."
                     rows={3}
-                    placeholder="Mensaje de la notificación"
                   />
                 </div>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div>
-                    <label className="text-sm font-medium">Tipo</label>
-                    <select
-                      value={newNotification.type}
-                      onChange={(e) => setNewNotification({...newNotification, type: e.target.value as Notification['type']})}
-                      className="w-full px-3 py-2 border border-input rounded-md"
-                    >
-                      <option value="manual">Manual</option>
-                      <option value="stock_low">Stock Bajo</option>
-                      <option value="expiry_warning">Vencimiento</option>
-                      <option value="payment_due">Pago</option>
-                      <option value="production_alert">Producción</option>
-                      <option value="import_alert">Importación</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium">Prioridad</label>
-                    <select
-                      value={newNotification.priority}
-                      onChange={(e) => setNewNotification({...newNotification, priority: e.target.value as Notification['priority']})}
-                      className="w-full px-3 py-2 border border-input rounded-md"
-                    >
-                      <option value="low">Baja</option>
-                      <option value="medium">Media</option>
-                      <option value="high">Alta</option>
-                      <option value="critical">Crítica</option>
-                    </select>
-                  </div>
+                <div>
+                  <Label htmlFor="priority">Prioridad</Label>
+                  <Select defaultValue="medium">
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccione la prioridad" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {priorities.map((priority) => (
+                        <SelectItem key={priority.value} value={priority.value}>
+                          {priority.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
                   Cancelar
                 </Button>
-                <Button onClick={handleCreateNotification}>
+                <Button type="submit">
                   Crear Notificación
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-          <Dialog open={isSettingsDialogOpen} onOpenChange={setIsSettingsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline">
-                <Settings className="h-4 w-4 mr-2" />
-                Configuración
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Configuración de Notificaciones</DialogTitle>
-                <DialogDescription>
-                  Configure las preferencias de notificaciones
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium">Tipos de Alertas</label>
-                  <div className="space-y-2 mt-2">
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        id="stockAlerts"
-                        checked={settings.stockAlerts}
-                        onChange={(e) => setSettings({...settings, stockAlerts: e.target.checked})}
-                        className="rounded"
-                      />
-                      <label htmlFor="stockAlerts">Alertas de stock bajo</label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        id="expiryAlerts"
-                        checked={settings.expiryAlerts}
-                        onChange={(e) => setSettings({...settings, expiryAlerts: e.target.checked})}
-                        className="rounded"
-                      />
-                      <label htmlFor="expiryAlerts">Alertas de vencimiento</label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        id="paymentAlerts"
-                        checked={settings.paymentAlerts}
-                        onChange={(e) => setSettings({...settings, paymentAlerts: e.target.checked})}
-                        className="rounded"
-                      />
-                      <label htmlFor="paymentAlerts">Alertas de pagos</label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        id="productionAlerts"
-                        checked={settings.productionAlerts}
-                        onChange={(e) => setSettings({...settings, productionAlerts: e.target.checked})}
-                        className="rounded"
-                      />
-                      <label htmlFor="productionAlerts">Alertas de producción</label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        id="importAlerts"
-                        checked={settings.importAlerts}
-                        onChange={(e) => setSettings({...settings, importAlerts: e.target.checked})}
-                        className="rounded"
-                      />
-                      <label htmlFor="importAlerts">Alertas de importación</label>
-                    </div>
-                  </div>
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Métodos de Notificación</label>
-                  <div className="space-y-2 mt-2">
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        id="emailNotifications"
-                        checked={settings.emailNotifications}
-                        onChange={(e) => setSettings({...settings, emailNotifications: e.target.checked})}
-                        className="rounded"
-                      />
-                      <label htmlFor="emailNotifications">Notificaciones por email</label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        id="pushNotifications"
-                        checked={settings.pushNotifications}
-                        onChange={(e) => setSettings({...settings, pushNotifications: e.target.checked})}
-                        className="rounded"
-                      />
-                      <label htmlFor="pushNotifications">Notificaciones push</label>
-                    </div>
-                  </div>
-                </div>
-                <div className="grid gap-4 md:grid-cols-3">
-                  <div>
-                    <label className="text-sm font-medium">Umbral Stock Bajo (%)</label>
-                    <input
-                      type="number"
-                      value={settings.lowStockThreshold}
-                      onChange={(e) => setSettings({...settings, lowStockThreshold: parseInt(e.target.value)})}
-                      className="w-full px-3 py-2 border border-input rounded-md"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium">Días Antes Vencimiento</label>
-                    <input
-                      type="number"
-                      value={settings.expiryWarningDays}
-                      onChange={(e) => setSettings({...settings, expiryWarningDays: parseInt(e.target.value)})}
-                      className="w-full px-3 py-2 border border-input rounded-md"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium">Recordatorio Pagos (días)</label>
-                    <input
-                      type="number"
-                      value={settings.paymentReminderDays}
-                      onChange={(e) => setSettings({...settings, paymentReminderDays: parseInt(e.target.value)})}
-                      className="w-full px-3 py-2 border border-input rounded-md"
-                    />
-                  </div>
-                </div>
-              </div>
-              <DialogFooter>
-                <Button onClick={() => setIsSettingsDialogOpen(false)}>
-                  Guardar Configuración
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -573,210 +270,265 @@ export function NotificationsPage() {
         </div>
       </div>
 
-      {/* Resumen de Notificaciones */}
+      {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Bell className="h-5 w-5 text-blue-600" />
+            <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium">Total</p>
+                <p className="text-sm font-medium text-muted-foreground">Total</p>
                 <p className="text-2xl font-bold">{notifications.length}</p>
               </div>
+              <Bell className="h-8 w-8 text-muted-foreground" />
             </div>
           </CardContent>
         </Card>
-        
         <Card>
           <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Eye className="h-5 w-5 text-red-600" />
+            <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium">No Leídas</p>
+                <p className="text-sm font-medium text-muted-foreground">No Leídas</p>
                 <p className="text-2xl font-bold">{unreadCount}</p>
               </div>
+              <AlertTriangle className="h-8 w-8 text-orange-600" />
             </div>
           </CardContent>
         </Card>
-        
         <Card>
           <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-red-600" />
+            <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium">Críticas</p>
+                <p className="text-sm font-medium text-muted-foreground">Críticas</p>
                 <p className="text-2xl font-bold">{criticalCount}</p>
               </div>
+              <AlertTriangle className="h-8 w-8 text-red-600" />
             </div>
           </CardContent>
         </Card>
-        
         <Card>
           <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <CheckCircle className="h-5 w-5 text-green-600" />
+            <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium">Leídas</p>
-                <p className="text-2xl font-bold">{notifications.filter(n => n.status === 'read').length}</p>
+                <p className="text-sm font-medium text-muted-foreground">Hoy</p>
+                <p className="text-2xl font-bold">
+                  {notifications.filter(n => 
+                    n.createdAt.toDateString() === new Date().toDateString()
+                  ).length}
+                </p>
               </div>
+              <Calendar className="h-8 w-8 text-blue-600" />
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Filtros */}
+      {/* Filters */}
       <Card>
-        <CardContent className="pt-6">
-          <div className="flex gap-4">
-            <div className="flex-1">
-              <label className="text-sm font-medium">Buscar</label>
-              <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <input
-                  type="text"
-                  placeholder="Buscar en notificaciones..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 px-3 py-2 border border-input rounded-md"
-                />
-              </div>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Filter className="h-5 w-5" />
+            Filtros y Búsqueda
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-5">
+            <div className="relative">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar notificaciones..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
             </div>
-            <div>
-              <label className="text-sm font-medium">Tipo</label>
-              <select
-                value={filterType}
-                onChange={(e) => setFilterType(e.target.value)}
-                className="w-full px-3 py-2 border border-input rounded-md"
-              >
-                <option value="all">Todos</option>
-                <option value="stock_low">Stock Bajo</option>
-                <option value="expiry_warning">Vencimiento</option>
-                <option value="payment_due">Pago</option>
-                <option value="production_alert">Producción</option>
-                <option value="import_alert">Importación</option>
-                <option value="manual">Manual</option>
-              </select>
-            </div>
-            <div>
-              <label className="text-sm font-medium">Prioridad</label>
-              <select
-                value={filterPriority}
-                onChange={(e) => setFilterPriority(e.target.value)}
-                className="w-full px-3 py-2 border border-input rounded-md"
-              >
-                <option value="all">Todas</option>
-                <option value="critical">Crítica</option>
-                <option value="high">Alta</option>
-                <option value="medium">Media</option>
-                <option value="low">Baja</option>
-              </select>
-            </div>
-            <div>
-              <label className="text-sm font-medium">Estado</label>
-              <select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-                className="w-full px-3 py-2 border border-input rounded-md"
-              >
-                <option value="all">Todos</option>
-                <option value="unread">No Leídas</option>
-                <option value="read">Leídas</option>
-                <option value="archived">Archivadas</option>
-              </select>
-            </div>
+            <Select value={filterType} onValueChange={setFilterType}>
+              <SelectTrigger>
+                <SelectValue placeholder="Tipo de notificación" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos los tipos</SelectItem>
+                {notificationTypes.map((type) => (
+                  <SelectItem key={type.value} value={type.value}>
+                    {type.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={filterPriority} onValueChange={setFilterPriority}>
+              <SelectTrigger>
+                <SelectValue placeholder="Prioridad" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas las prioridades</SelectItem>
+                {priorities.map((priority) => (
+                  <SelectItem key={priority.value} value={priority.value}>
+                    {priority.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger>
+                <SelectValue placeholder="Estado" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos los estados</SelectItem>
+                <SelectItem value="unread">No leídas</SelectItem>
+                <SelectItem value="read">Leídas</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button variant="outline" onClick={handleMarkAllAsRead}>
+              Marcar todas como leídas
+            </Button>
           </div>
         </CardContent>
       </Card>
 
-      {/* Lista de Notificaciones */}
+      {/* Notifications List */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Bell className="h-5 w-5" />
-            Notificaciones ({filteredNotifications.length})
-          </CardTitle>
+          <CardTitle>Lista de Notificaciones</CardTitle>
+          <CardDescription>
+            Gestione todas las notificaciones y alertas del sistema
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {filteredNotifications.map((notification) => (
-              <div
-                key={notification.id}
-                className={`p-4 border rounded-lg ${
-                  notification.status === 'unread' ? 'bg-blue-50 border-blue-200' : 'bg-white'
-                }`}
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start gap-3 flex-1">
-                    <div className="mt-1">
-                      {getTypeIcon(notification.type)}
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <h3 className="font-medium">{notification.title}</h3>
-                        {getPriorityBadge(notification.priority)}
-                        {getStatusBadge(notification.status)}
-                      </div>
-                      <p className="text-sm text-muted-foreground mb-2">
-                        {notification.message}
-                      </p>
-                      <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                        <span>{getTypeLabel(notification.type)}</span>
-                        <span>{notification.createdAt.toLocaleString()}</span>
-                        {notification.metadata?.productName && (
-                          <span>Producto: {notification.metadata.productName}</span>
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Notificación</TableHead>
+                  <TableHead>Tipo</TableHead>
+                  <TableHead>Prioridad</TableHead>
+                  <TableHead>Estado</TableHead>
+                  <TableHead>Fecha</TableHead>
+                  <TableHead>Acciones</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredNotifications.map((notification) => (
+                  <TableRow key={notification.id} className={notification.status === 'unread' ? 'bg-blue-50' : ''}>
+                    <TableCell>
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          {getPriorityIcon(notification.priority)}
+                          <div className="font-medium">{notification.title}</div>
+                          {notification.status === 'unread' && (
+                            <Badge variant="default" className="text-xs">Nueva</Badge>
+                          )}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {notification.message}
+                        </div>
+                        {notification.relatedEntity && (
+                          <div className="text-xs text-blue-600">
+                            Relacionado: {notification.relatedEntity.name}
+                          </div>
                         )}
-                        {notification.metadata?.amount && (
-                          <span>Monto: ₲{notification.metadata.amount.toLocaleString()}</span>
-                        )}
                       </div>
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    {notification.status === 'unread' ? (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleMarkAsRead(notification.id)}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                    ) : (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleMarkAsUnread(notification.id)}
-                      >
-                        <EyeOff className="h-4 w-4" />
-                      </Button>
-                    )}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleArchive(notification.id)}
-                    >
-                      <Archive className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDelete(notification.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            ))}
-            
-            {filteredNotifications.length === 0 && (
-              <div className="text-center py-8 text-muted-foreground">
-                <Bell className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No hay notificaciones que coincidan con los filtros</p>
-              </div>
-            )}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        {getTypeIcon(notification.type)}
+                        <span className="text-sm">
+                          {notificationTypes.find(t => t.value === notification.type)?.label}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {getPriorityBadge(notification.priority)}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={notification.status === 'unread' ? 'default' : 'secondary'}>
+                        {notification.status === 'unread' ? 'No leída' : 'Leída'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm">
+                        {formatDate(notification.createdAt)}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        {notification.status === 'unread' && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleMarkAsRead(notification.id)}
+                          >
+                            <CheckCircle className="h-4 w-4" />
+                          </Button>
+                        )}
+                        <Button variant="ghost" size="sm">
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteNotification(notification.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </div>
         </CardContent>
       </Card>
+
+      {/* Settings Dialog */}
+      <Dialog open={isSettingsDialogOpen} onOpenChange={setIsSettingsDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Configuración de Notificaciones</DialogTitle>
+            <DialogDescription>
+              Configure las preferencias de notificaciones
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Tipos de Notificación</Label>
+              {notificationTypes.map((type) => (
+                <div key={type.value} className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    {getTypeIcon(type.value)}
+                    <span className="text-sm">{type.label}</span>
+                  </div>
+                  <Switch defaultChecked />
+                </div>
+              ))}
+            </div>
+            <div className="space-y-2">
+              <Label>Métodos de Notificación</Label>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Mail className="h-4 w-4" />
+                  <span className="text-sm">Email</span>
+                </div>
+                <Switch defaultChecked />
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4" />
+                  <span className="text-sm">WhatsApp</span>
+                </div>
+                <Switch />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setIsSettingsDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button type="submit">
+              Guardar Configuración
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 } 
