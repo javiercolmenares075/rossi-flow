@@ -32,6 +32,10 @@ import {
   Scale
 } from 'lucide-react';
 import { InventoryMovement, Product, Warehouse, Batch } from '@/types';
+import { InventoryService } from '@/lib/inventoryService';
+import { InventoryMovementForm } from '@/components/inventory/InventoryMovementForm';
+import { BulkEntryForm } from '@/components/inventory/BulkEntryForm';
+import { BatchList } from '@/components/inventory/BatchList';
 
 // Mock data for development
 const mockProducts: Product[] = [
@@ -222,34 +226,15 @@ export function InventoryPage() {
                 Ingreso Masivo
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader>
-                <DialogTitle>Ingreso Masivo de Inventario</DialogTitle>
-                <DialogDescription>
-                  Ingrese múltiples productos desde una orden de compra o archivo.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <Label>Seleccionar Orden de Compra</Label>
-                  <Select>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccione una orden de compra" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="oc-001">OC-2024-001 - Lácteos del Sur</SelectItem>
-                      <SelectItem value="oc-002">OC-2024-002 - Granja San Miguel</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>O subir archivo CSV</Label>
-                  <Input type="file" accept=".csv" />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button>Procesar Ingreso</Button>
-              </DialogFooter>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+              <BulkEntryForm
+                onSuccess={(result) => {
+                  console.log('Ingreso masivo completado:', result);
+                  setIsBulkEntryDialogOpen(false);
+                  // Aquí se actualizaría la lista de movimientos y lotes
+                }}
+                onCancel={() => setIsBulkEntryDialogOpen(false)}
+              />
             </DialogContent>
           </Dialog>
           <Dialog open={isMovementDialogOpen} onOpenChange={setIsMovementDialogOpen}>
@@ -259,41 +244,17 @@ export function InventoryPage() {
                 Nuevo Movimiento
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader>
-                <DialogTitle>Nuevo Movimiento de Inventario</DialogTitle>
-                <DialogDescription>
-                  Registre un movimiento de entrada o salida de inventario.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div>
-                    <Label htmlFor="movementType">Tipo de Movimiento *</Label>
-                    <Select>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleccione el tipo" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="entry">Entrada</SelectItem>
-                        <SelectItem value="exit">Salida</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="movementDate">Fecha *</Label>
-                    <Input
-                      id="movementDate"
-                      type="date"
-                      defaultValue={new Date().toISOString().split('T')[0]}
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="movementProduct">Producto *</Label>
-                    <Select>
-                      <SelectTrigger>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+              <InventoryMovementForm
+                onSuccess={(movement) => {
+                  console.log('Movimiento creado:', movement);
+                  setIsMovementDialogOpen(false);
+                  // Aquí se actualizaría la lista de movimientos
+                }}
+                onCancel={() => setIsMovementDialogOpen(false)}
+              />
+            </DialogContent>
+          </Dialog>
                         <SelectValue placeholder="Seleccione el producto" />
                       </SelectTrigger>
                       <SelectContent>

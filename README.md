@@ -227,11 +227,11 @@ VITE_COMPANY_NAME="Rossi Lácteos"
 - [x] Generación de PDF
 - [x] Envío por email/WhatsApp
 
-### Fase 3: Inventario (Semana 3)
-- [ ] Movimientos de inventario
-- [ ] Control de lotes
-- [ ] Ingreso masivo
-- [ ] Códigos QR
+### Fase 3: Inventario (Semana 3) ✅
+- [x] Movimientos de inventario
+- [x] Control de lotes
+- [x] Ingreso masivo
+- [x] Códigos QR
 
 ### Fase 4: Producción (Semana 4)
 - [ ] Gestión de recetas
