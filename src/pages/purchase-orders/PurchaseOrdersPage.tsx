@@ -29,6 +29,7 @@ import {
   FileText
 } from 'lucide-react';
 import { PurchaseOrder, Provider, Product } from '@/types';
+import { PurchaseOrderService } from '@/lib/purchaseOrderService';
 
 // Mock data for development
 const mockProviders: Provider[] = [

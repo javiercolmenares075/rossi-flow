@@ -221,11 +221,11 @@ VITE_COMPANY_NAME="Rossi Lácteos"
 - [ ] Productos CRUD
 - [ ] Catálogos básicos
 
-### Fase 2: Órdenes de Compra (Semana 2)
-- [ ] Formulario de creación
-- [ ] Listado y gestión
-- [ ] Generación de PDF
-- [ ] Envío por email/WhatsApp
+### Fase 2: Órdenes de Compra (Semana 2) ✅
+- [x] Formulario de creación
+- [x] Listado y gestión
+- [x] Generación de PDF
+- [x] Envío por email/WhatsApp
 
 ### Fase 3: Inventario (Semana 3)
 - [ ] Movimientos de inventario
