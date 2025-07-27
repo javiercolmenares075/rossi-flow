@@ -1,189 +1,380 @@
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Link, useLocation } from 'react-router-dom';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
-  Package, 
-  ShoppingCart, 
-  Users, 
-  Warehouse, 
-  Factory, 
-  DollarSign, 
-  Bell, 
-  Settings, 
-  BarChart3,
-  ChevronLeft,
+  ChevronLeft, 
   ChevronRight,
-  Milk,
+  LayoutDashboard,
+  Users,
+  Building2,
+  Package,
+  ShoppingCart,
+  Truck,
+  CreditCard,
+  Bell,
+  Settings,
+  FileText,
+  BarChart3,
+  Factory,
+  Warehouse,
+  ClipboardList,
+  QrCode,
+  AlertTriangle,
+  Calendar,
+  Archive,
+  Tag,
+  Scale,
+  MapPin,
+  Shield,
+  Activity,
+  TrendingUp,
+  PieChart,
+  Upload,
+  Plus,
+  CheckCircle,
+  Clock,
   User,
-  LogOut
-} from "lucide-react";
-import { cn } from "@/lib/utils";
+} from 'lucide-react';
 
 interface SidebarProps {
-  currentModule: string;
-  onModuleChange: (module: string) => void;
+  isCollapsed: boolean;
+  onToggle: () => void;
 }
 
-const modules = [
-  { id: "dashboard", label: "Dashboard", icon: BarChart3, notifications: 0 },
-  { id: "productos", label: "Productos", icon: Package, notifications: 0 },
-  { id: "proveedores", label: "Proveedores", icon: Users, notifications: 0 },
-  { id: "ordenes", label: "Órdenes de Compra", icon: ShoppingCart, notifications: 3 },
-  { id: "inventario", label: "Inventario", icon: Warehouse, notifications: 5 },
-  { id: "produccion", label: "Producción", icon: Factory, notifications: 1 },
-  { id: "pagos", label: "Pagos", icon: DollarSign, notifications: 2 },
-  { id: "notificaciones", label: "Notificaciones", icon: Bell, notifications: 8 },
+interface MenuItem {
+  title: string;
+  href: string;
+  icon: any;
+  badge?: string;
+  children?: MenuItem[];
+}
+
+const menuItems: MenuItem[] = [
+  {
+    title: 'Dashboard',
+    href: '/',
+    icon: LayoutDashboard,
+  },
+  {
+    title: 'Catálogos',
+    href: '/catalogs',
+    icon: Archive,
+    children: [
+      {
+        title: 'Proveedores',
+        href: '/catalogs/providers',
+        icon: Building2,
+      },
+      {
+        title: 'Productos',
+        href: '/catalogs/products',
+        icon: Package,
+      },
+      {
+        title: 'Tipos de Producto',
+        href: '/catalogs/product-types',
+        icon: Tag,
+      },
+      {
+        title: 'Tipos de Almacenamiento',
+        href: '/catalogs/storage-types',
+        icon: Warehouse,
+      },
+      {
+        title: 'Almacenes',
+        href: '/catalogs/warehouses',
+        icon: MapPin,
+      },
+      {
+        title: 'Tipos de Pesaje',
+        href: '/catalogs/weighing-types',
+        icon: Scale,
+      },
+      {
+        title: 'Empleados',
+        href: '/catalogs/employees',
+        icon: Users,
+      },
+      {
+        title: 'Estados',
+        href: '/catalogs/states',
+        icon: CheckCircle,
+      },
+      {
+        title: 'Tipos de Pago',
+        href: '/catalogs/payment-types',
+        icon: CreditCard,
+      },
+    ],
+  },
+  {
+    title: 'Órdenes de Compra',
+    href: '/purchase-orders',
+    icon: ShoppingCart,
+    children: [
+      {
+        title: 'Nueva Orden',
+        href: '/purchase-orders/new',
+        icon: Plus,
+      },
+      {
+        title: 'Listado',
+        href: '/purchase-orders',
+        icon: ClipboardList,
+      },
+      {
+        title: 'Historial',
+        href: '/purchase-orders/history',
+        icon: FileText,
+      },
+    ],
+  },
+  {
+    title: 'Inventario',
+    href: '/inventory',
+    icon: Warehouse,
+    children: [
+      {
+        title: 'Movimientos',
+        href: '/inventory/movements',
+        icon: Truck,
+      },
+      {
+        title: 'Stock',
+        href: '/inventory/stock',
+        icon: Package,
+      },
+      {
+        title: 'Lotes',
+        href: '/inventory/batches',
+        icon: QrCode,
+      },
+      {
+        title: 'Ingreso Masivo',
+        href: '/inventory/bulk-entry',
+        icon: Upload,
+      },
+    ],
+  },
+  {
+    title: 'Pagos',
+    href: '/payments',
+    icon: CreditCard,
+    children: [
+      {
+        title: 'Registrar Pago',
+        href: '/payments/new',
+        icon: Plus,
+      },
+      {
+        title: 'Pendientes',
+        href: '/payments/pending',
+        icon: Clock,
+      },
+      {
+        title: 'Historial',
+        href: '/payments/history',
+        icon: FileText,
+      },
+    ],
+  },
+  {
+    title: 'Producción',
+    href: '/production',
+    icon: Factory,
+    children: [
+      {
+        title: 'Recetas',
+        href: '/production/recipes',
+        icon: FileText,
+      },
+      {
+        title: 'Nueva Orden',
+        href: '/production/new',
+        icon: Plus,
+      },
+      {
+        title: 'Órdenes',
+        href: '/production/orders',
+        icon: ClipboardList,
+      },
+      {
+        title: 'Seguimiento',
+        href: '/production/tracking',
+        icon: Activity,
+      },
+    ],
+  },
+  {
+    title: 'Notificaciones',
+    href: '/notifications',
+    icon: Bell,
+    badge: '3',
+    children: [
+      {
+        title: 'Alertas',
+        href: '/notifications/alerts',
+        icon: AlertTriangle,
+      },
+      {
+        title: 'Recordatorios',
+        href: '/notifications/reminders',
+        icon: Calendar,
+      },
+      {
+        title: 'Configuración',
+        href: '/notifications/settings',
+        icon: Settings,
+      },
+    ],
+  },
+  {
+    title: 'Reportes',
+    href: '/reports',
+    icon: BarChart3,
+    children: [
+      {
+        title: 'Dashboard',
+        href: '/reports/dashboard',
+        icon: TrendingUp,
+      },
+      {
+        title: 'Inventario',
+        href: '/reports/inventory',
+        icon: PieChart,
+      },
+      {
+        title: 'Compras',
+        href: '/reports/purchases',
+        icon: ShoppingCart,
+      },
+      {
+        title: 'Producción',
+        href: '/reports/production',
+        icon: Factory,
+      },
+      {
+        title: 'Pagos',
+        href: '/reports/payments',
+        icon: CreditCard,
+      },
+    ],
+  },
+  {
+    title: 'Administración',
+    href: '/admin',
+    icon: Settings,
+    children: [
+      {
+        title: 'Usuarios',
+        href: '/admin/users',
+        icon: Users,
+      },
+      {
+        title: 'Roles',
+        href: '/admin/roles',
+        icon: Shield,
+      },
+      {
+        title: 'Auditoría',
+        href: '/admin/audit',
+        icon: FileText,
+      },
+      {
+        title: 'Configuración',
+        href: '/admin/settings',
+        icon: Settings,
+      },
+    ],
+  },
 ];
 
-const adminModules = [
-  { id: "empleados", label: "Empleados", icon: User, notifications: 0 },
-  { id: "configuracion", label: "Configuración", icon: Settings, notifications: 0 },
-];
+export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
+  const location = useLocation();
 
-export function Sidebar({ currentModule, onModuleChange }: SidebarProps) {
-  const [collapsed, setCollapsed] = useState(false);
+  const renderMenuItem = (item: MenuItem, level: number = 0) => {
+    const isActive = location.pathname === item.href;
+    const hasChildren = item.children && item.children.length > 0;
+    const isExpanded = hasChildren && location.pathname.startsWith(item.href);
+
+    return (
+      <div key={item.href}>
+        <Link
+          to={item.href}
+          className={cn(
+            'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+            'hover:bg-accent hover:text-accent-foreground',
+            isActive && 'bg-accent text-accent-foreground',
+            level > 0 && 'ml-4',
+            isCollapsed && level === 0 && 'justify-center'
+          )}
+        >
+          <item.icon className={cn('h-4 w-4', isCollapsed && level === 0 && 'h-5 w-5')} />
+          {!isCollapsed && (
+            <>
+              <span className="flex-1">{item.title}</span>
+              {item.badge && (
+                <span className="ml-auto rounded-full bg-primary px-2 py-1 text-xs text-primary-foreground">
+                  {item.badge}
+                </span>
+              )}
+            </>
+          )}
+        </Link>
+        
+        {hasChildren && !isCollapsed && (
+          <div className={cn('ml-4 mt-1 space-y-1', isExpanded ? 'block' : 'hidden')}>
+            {item.children.map((child) => renderMenuItem(child, level + 1))}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className={cn(
-      "h-screen bg-sidebar border-r transition-all duration-300",
-      collapsed ? "w-16" : "w-64"
+      'flex h-full flex-col border-r bg-background',
+      isCollapsed ? 'w-16' : 'w-64'
     )}>
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-sidebar-border">
-        <div className={cn("flex items-center gap-3", collapsed && "justify-center")}>
-          <div className="w-8 h-8 bg-sidebar-accent rounded-lg flex items-center justify-center">
-            <Milk className="w-5 h-5 text-sidebar-foreground" />
+      <div className="flex h-16 items-center justify-between border-b px-4">
+        {!isCollapsed && (
+          <div className="flex items-center gap-2">
+            <Factory className="h-6 w-6 text-primary" />
+            <span className="font-semibold">Rossi</span>
           </div>
-          {!collapsed && (
-            <div>
-              <h1 className="font-bold text-sidebar-foreground">Inventarios Rossi</h1>
-              <p className="text-xs text-sidebar-foreground/70">Sistema de Gestión</p>
-            </div>
-          )}
-        </div>
+        )}
         <Button
           variant="ghost"
-          size="icon"
-          onClick={() => setCollapsed(!collapsed)}
-          className="h-8 w-8 text-sidebar-foreground hover:bg-sidebar-accent"
+          size="sm"
+          onClick={onToggle}
+          className="h-8 w-8 p-0"
         >
-          {collapsed ? (
-            <ChevronRight className="w-4 h-4" />
+          {isCollapsed ? (
+            <ChevronRight className="h-4 w-4" />
           ) : (
-            <ChevronLeft className="w-4 h-4" />
+            <ChevronLeft className="h-4 w-4" />
           )}
         </Button>
       </div>
 
-      {/* Main Navigation */}
-      <div className="flex-1 p-2 space-y-1">
-        <div className={cn("px-2 py-2", collapsed && "px-1")}>
-          {!collapsed && (
-            <h2 className="text-xs font-semibold text-sidebar-foreground/70 uppercase tracking-wider mb-2">
-              Módulos Principales
-            </h2>
-          )}
-          {modules.map((module) => {
-            const Icon = module.icon;
-            const isActive = currentModule === module.id;
-            
-            return (
-              <Button
-                key={module.id}
-                variant={isActive ? "default" : "ghost"}
-                className={cn(
-                  "w-full justify-start gap-3 mb-1 h-10 relative",
-                  collapsed ? "px-2" : "px-3",
-                  isActive 
-                    ? "bg-sidebar-accent text-sidebar-foreground" 
-                    : "text-sidebar-foreground/80 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
-                )}
-                onClick={() => onModuleChange(module.id)}
-              >
-                <Icon className="w-5 h-5 shrink-0" />
-                {!collapsed && (
-                  <>
-                    <span className="truncate">{module.label}</span>
-                    {module.notifications > 0 && (
-                      <Badge 
-                        variant="destructive" 
-                        className="ml-auto h-5 min-w-[20px] text-xs px-1"
-                      >
-                        {module.notifications}
-                      </Badge>
-                    )}
-                  </>
-                )}
-                {collapsed && module.notifications > 0 && (
-                  <Badge 
-                    variant="destructive" 
-                    className="absolute -top-1 -right-1 h-4 w-4 p-0 text-xs flex items-center justify-center"
-                  >
-                    {module.notifications}
-                  </Badge>
-                )}
-              </Button>
-            );
-          })}
-        </div>
-
-        {/* Admin Section */}
-        <div className={cn("px-2 py-2 border-t border-sidebar-border", collapsed && "px-1")}>
-          {!collapsed && (
-            <h2 className="text-xs font-semibold text-sidebar-foreground/70 uppercase tracking-wider mb-2">
-              Administración
-            </h2>
-          )}
-          {adminModules.map((module) => {
-            const Icon = module.icon;
-            const isActive = currentModule === module.id;
-            
-            return (
-              <Button
-                key={module.id}
-                variant={isActive ? "default" : "ghost"}
-                className={cn(
-                  "w-full justify-start gap-3 mb-1 h-10",
-                  collapsed ? "px-2" : "px-3",
-                  isActive 
-                    ? "bg-sidebar-accent text-sidebar-foreground" 
-                    : "text-sidebar-foreground/80 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
-                )}
-                onClick={() => onModuleChange(module.id)}
-              >
-                <Icon className="w-5 h-5 shrink-0" />
-                {!collapsed && <span className="truncate">{module.label}</span>}
-              </Button>
-            );
-          })}
-        </div>
-      </div>
+      {/* Navigation */}
+      <ScrollArea className="flex-1 px-3 py-4">
+        <nav className="space-y-2">
+          {menuItems.map((item) => renderMenuItem(item))}
+        </nav>
+      </ScrollArea>
 
       {/* Footer */}
-      <div className="p-2 border-t border-sidebar-border">
-        <div className={cn("flex items-center gap-3 px-2 py-2", collapsed && "justify-center")}>
-          <div className="w-8 h-8 bg-sidebar-accent rounded-full flex items-center justify-center">
-            <User className="w-4 h-4 text-sidebar-foreground" />
+      {!isCollapsed && (
+        <div className="border-t p-4">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <User className="h-4 w-4" />
+            <span>Usuario Actual</span>
           </div>
-          {!collapsed && (
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-sidebar-foreground truncate">Admin User</p>
-              <p className="text-xs text-sidebar-foreground/70">admin@rossi.com</p>
-            </div>
-          )}
         </div>
-        <Button
-          variant="ghost"
-          size={collapsed ? "icon" : "sm"}
-          className={cn(
-            "w-full text-sidebar-foreground/80 hover:bg-sidebar-accent/50",
-            collapsed ? "px-2" : "justify-start gap-3"
-          )}
-        >
-          <LogOut className="w-4 h-4" />
-          {!collapsed && "Cerrar Sesión"}
-        </Button>
-      </div>
+      )}
     </div>
   );
 }
