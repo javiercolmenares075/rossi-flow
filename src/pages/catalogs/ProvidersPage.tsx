@@ -1,577 +1,296 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
+import { zodResolver } from '@zodjs/resolver';
 import { z } from 'zod';
+import { Plus, Search, Edit, Trash2, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { 
-  Plus, 
-  Search, 
-  Filter, 
-  Edit, 
-  Trash2, 
-  Eye, 
-  Building2,
-  Phone,
-  Mail,
-  CheckCircle,
-  XCircle,
-  FileText,
-  Calendar
-} from 'lucide-react';
-import { Provider } from '@/types';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
+import { useProviders } from '@/hooks/useProviders';
+import { toast } from 'sonner';
 
-// Validation schema for provider
+// Schema de validación
 const providerSchema = z.object({
-  type: z.enum(['contract', 'recurrent']),
-  businessName: z.string().min(2, 'La razón social debe tener al menos 2 caracteres'),
-  ruc: z.string().min(10, 'El RUC debe tener al menos 10 caracteres'),
-  address: z.string().min(5, 'La dirección debe tener al menos 5 caracteres'),
+  name: z.string().min(1, 'El nombre es requerido'),
+  contact: z.string().min(1, 'El contacto es requerido'),
   email: z.string().email('Email inválido'),
-  phones: z.array(z.string()).min(1, 'Debe agregar al menos un teléfono'),
+  phone: z.string().min(1, 'El teléfono es requerido'),
+  address: z.string().min(1, 'La dirección es requerida'),
   productTypes: z.array(z.string()).min(1, 'Debe seleccionar al menos un tipo de producto'),
-  contractNumber: z.string().optional(),
-  contractStartDate: z.string().optional(),
-  deliveryFrequency: z.enum(['daily', 'weekly', 'monthly']).optional(),
-  status: z.enum(['active', 'inactive']).default('active')
+  status: z.string().min(1, 'El estado es requerido'),
 });
 
 type ProviderFormData = z.infer<typeof providerSchema>;
 
-// Mock data for product types (available for selection)
+// Tipos de productos disponibles
 const availableProductTypes = [
-  { id: '1', name: 'Materia Prima', code: 'MP', category: 'raw_material' },
-  { id: '2', name: 'Producto Terminado', code: 'PT', category: 'finished_product' },
-  { id: '3', name: 'Embalaje', code: 'EMB', category: 'packaging' },
-  { id: '4', name: 'Lácteos', code: 'LAC', category: 'finished_product' },
-  { id: '5', name: 'Cárnicos', code: 'CAR', category: 'finished_product' },
-  { id: '6', name: 'Granos', code: 'GRA', category: 'raw_material' },
-  { id: '7', name: 'Frutas y Verduras', code: 'FV', category: 'raw_material' },
-  { id: '8', name: 'Bebidas', code: 'BEB', category: 'finished_product' }
+  { id: '1', name: 'Lácteos' },
+  { id: '2', name: 'Cárnicos' },
+  { id: '3', name: 'Granos' },
+  { id: '4', name: 'Verduras' },
+  { id: '5', name: 'Frutas' },
+  { id: '6', name: 'Condimentos' },
+  { id: '7', name: 'Embalajes' },
+  { id: '8', name: 'Equipos' },
 ];
 
-// Mock data for development
-const mockProviders: Provider[] = [
-  {
-    id: '1',
-    type: 'contract',
-    businessName: 'Lácteos del Sur S.A.',
-    ruc: '80012345-1',
-    address: 'Ruta 2 Km 45, San Lorenzo',
-    email: 'contacto@lacteosdelsur.com.py',
-    phones: ['021-123-456', '0981-123-456'],
-    contacts: [
-      {
-        name: 'Juan Pérez',
-        position: 'Gerente Comercial',
-        phone: '0981-123-456',
-        email: 'juan.perez@lacteosdelsur.com.py'
-      }
-    ],
-    categories: ['Lácteos', 'Materia Prima'],
-    associatedProducts: ['Leche entera', 'Queso paraguay'],
-    productTypes: ['4', '1'], // IDs de los tipos de productos
-    contractFile: 'contrato_lacteos_sur.pdf',
-    contractNumber: 'CON-2024-001',
-    contractStartDate: new Date('2024-01-15'),
-    deliveryFrequency: 'weekly',
-    status: 'active',
-    createdAt: new Date('2024-01-10'),
-    updatedAt: new Date('2024-01-15')
-  },
-  {
-    id: '2',
-    type: 'recurrent',
-    businessName: 'Granja San Miguel',
-    ruc: '80023456-2',
-    address: 'Ruta 1 Km 30, Luque',
-    email: 'info@granjasanmiguel.com.py',
-    phones: ['021-234-567', '0982-234-567'],
-    contacts: [
-      {
-        name: 'María González',
-        position: 'Encargada de Ventas',
-        phone: '0982-234-567',
-        email: 'maria.gonzalez@granjasanmiguel.com.py'
-      }
-    ],
-    categories: ['Cárnicos', 'Materia Prima'],
-    associatedProducts: ['Huevos frescos', 'Pollo entero'],
-    productTypes: ['5', '1'], // IDs de los tipos de productos
-    status: 'active',
-    createdAt: new Date('2024-01-05'),
-    updatedAt: new Date('2024-01-12')
-  }
+const statusOptions = [
+  { value: 'active', label: 'Activo' },
+  { value: 'inactive', label: 'Inactivo' },
+  { value: 'suspended', label: 'Suspendido' },
 ];
 
-const providerTypes = [
-  { value: 'contract', label: 'Por Contrato' },
-  { value: 'recurrent', label: 'Recurrente' }
-];
+export default function ProvidersPage() {
+  const {
+    providers,
+    loading,
+    error,
+    createProvider,
+    updateProvider,
+    deleteProvider,
+    searchProviders,
+    refresh,
+    clearError
+  } = useProviders();
 
-const deliveryFrequencies = [
-  { value: 'daily', label: 'Diario' },
-  { value: 'weekly', label: 'Semanal' },
-  { value: 'monthly', label: 'Mensual' }
-];
-
-export function ProvidersPage() {
-  const [providers, setProviders] = useState<Provider[]>(mockProviders);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState<string>('all');
-  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [selectedProvider, setSelectedProvider] = useState<Provider | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [selectedProvider, setSelectedProvider] = useState<any>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const createForm = useForm<ProviderFormData>({
     resolver: zodResolver(providerSchema),
     defaultValues: {
-      type: 'recurrent',
+      name: '',
+      contact: '',
+      email: '',
+      phone: '',
+      address: '',
+      productTypes: [],
       status: 'active',
-      phones: [''],
-      productTypes: []
-    }
+    },
   });
 
   const editForm = useForm<ProviderFormData>({
-    resolver: zodResolver(providerSchema)
+    resolver: zodResolver(providerSchema),
   });
-
-  const filteredProviders = providers.filter(provider => {
-    const matchesSearch = provider.businessName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         provider.ruc.includes(searchTerm) ||
-                         provider.email.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = filterType === 'all' || provider.type === filterType;
-    const matchesStatus = filterStatus === 'all' || provider.status === filterStatus;
-    
-    return matchesSearch && matchesType && matchesStatus;
-  });
-
-  const handleDeleteProvider = (id: string) => {
-    setProviders(providers.filter(provider => provider.id !== id));
-  };
 
   const handleCreateProvider = async (data: ProviderFormData) => {
-    setIsSubmitting(true);
     try {
-      const newProvider: Provider = {
-        id: Date.now().toString(),
-        ...data,
-        contacts: [],
-        categories: [],
-        associatedProducts: [],
-        contractFile: undefined,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
-      setProviders([...providers, newProvider]);
+      await createProvider({
+        name: data.name,
+        contact: data.contact,
+        email: data.email,
+        phone: data.phone,
+        address: data.address,
+        product_types: data.productTypes,
+        status: data.status,
+      });
+      
+      toast.success('Proveedor creado exitosamente');
       setIsCreateDialogOpen(false);
       createForm.reset();
     } catch (error) {
+      toast.error('Error al crear el proveedor');
       console.error('Error creating provider:', error);
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
   const handleEditProvider = async (data: ProviderFormData) => {
     if (!selectedProvider) return;
     
-    setIsSubmitting(true);
     try {
-      const updatedProvider: Provider = {
-        ...selectedProvider,
-        ...data,
-        updatedAt: new Date()
-      };
-      setProviders(providers.map(p => p.id === selectedProvider.id ? updatedProvider : p));
+      await updateProvider(selectedProvider.id, {
+        name: data.name,
+        contact: data.contact,
+        email: data.email,
+        phone: data.phone,
+        address: data.address,
+        product_types: data.productTypes,
+        status: data.status,
+      });
+      
+      toast.success('Proveedor actualizado exitosamente');
       setIsEditDialogOpen(false);
       setSelectedProvider(null);
-      editForm.reset();
     } catch (error) {
+      toast.error('Error al actualizar el proveedor');
       console.error('Error updating provider:', error);
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
-  const openEditDialog = (provider: Provider) => {
+  const handleDeleteProvider = async (id: string) => {
+    if (!confirm('¿Está seguro de que desea eliminar este proveedor?')) return;
+    
+    setIsDeleting(true);
+    try {
+      await deleteProvider(id);
+      toast.success('Proveedor eliminado exitosamente');
+    } catch (error) {
+      toast.error('Error al eliminar el proveedor');
+      console.error('Error deleting provider:', error);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const openEditDialog = (provider: any) => {
     setSelectedProvider(provider);
     editForm.reset({
-      type: provider.type,
-      businessName: provider.businessName,
-      ruc: provider.ruc,
-      address: provider.address,
+      name: provider.name,
+      contact: provider.contact,
       email: provider.email,
-      phones: provider.phones,
-      productTypes: provider.productTypes || [],
-      contractNumber: provider.contractNumber,
-      contractStartDate: provider.contractStartDate?.toISOString().split('T')[0],
-      deliveryFrequency: provider.deliveryFrequency,
-      status: provider.status
+      phone: provider.phone,
+      address: provider.address,
+      productTypes: provider.product_types || [],
+      status: provider.status,
     });
     setIsEditDialogOpen(true);
   };
 
-  const getTypeBadge = (type: string) => {
-    const providerType = providerTypes.find(t => t.value === type);
-    return (
-      <Badge variant={type === 'contract' ? 'default' : 'secondary'}>
-        {providerType?.label || type}
-      </Badge>
-    );
+  const openViewDialog = (provider: any) => {
+    setSelectedProvider(provider);
+    setIsViewDialogOpen(true);
   };
 
   const getStatusBadge = (status: string) => {
-    return (
-      <Badge variant={status === 'active' ? 'default' : 'destructive'}>
-        {status === 'active' ? 'Activo' : 'Inactivo'}
-      </Badge>
-    );
+    const statusMap: { [key: string]: { variant: "default" | "secondary" | "destructive", label: string } } = {
+      active: { variant: "default", label: "Activo" },
+      inactive: { variant: "secondary", label: "Inactivo" },
+      suspended: { variant: "destructive", label: "Suspendido" },
+    };
+    
+    const statusInfo = statusMap[status] || { variant: "secondary", label: status };
+    return <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>;
   };
 
-  const getProductTypesNames = (productTypeIds: string[]) => {
-    return productTypeIds
-      .map(id => availableProductTypes.find(pt => pt.id === id)?.name)
+  const getProductTypesNames = (productTypes: string[]) => {
+    return productTypes
+      .map(typeId => availableProductTypes.find(pt => pt.id === typeId)?.name)
       .filter(Boolean)
       .join(', ');
   };
 
+  const filteredProviders = providers.filter(provider =>
+    provider.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    provider.contact.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    provider.email.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-2 text-muted-foreground">Cargando proveedores...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <p className="text-destructive mb-2">Error al cargar proveedores</p>
+          <Button onClick={refresh} variant="outline">Reintentar</Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold">Proveedores</h1>
           <p className="text-muted-foreground">
-            Gestión de proveedores, contratos y asociaciones de productos
+            Gestiona los proveedores y sus tipos de productos
           </p>
         </div>
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Nuevo Proveedor
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Crear Nuevo Proveedor</DialogTitle>
-              <DialogDescription>
-                Complete la información del proveedor. Los campos marcados con * son obligatorios.
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={createForm.handleSubmit(handleCreateProvider)} className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <Label htmlFor="type">Tipo de Proveedor *</Label>
-                  <Select 
-                    value={createForm.watch('type')} 
-                    onValueChange={(value) => createForm.setValue('type', value as 'contract' | 'recurrent')}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccione el tipo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {providerTypes.map(type => (
-                        <SelectItem key={type.value} value={type.value}>
-                          {type.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {createForm.formState.errors.type && (
-                    <p className="text-sm text-destructive mt-1">
-                      {createForm.formState.errors.type.message}
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <Label htmlFor="status">Estado</Label>
-                  <Select 
-                    value={createForm.watch('status')} 
-                    onValueChange={(value) => createForm.setValue('status', value as 'active' | 'inactive')}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccione el estado" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="active">Activo</SelectItem>
-                      <SelectItem value="inactive">Inactivo</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label htmlFor="businessName">Razón Social *</Label>
-                  <Input
-                    {...createForm.register('businessName')}
-                    placeholder="Nombre de la empresa"
-                  />
-                  {createForm.formState.errors.businessName && (
-                    <p className="text-sm text-destructive mt-1">
-                      {createForm.formState.errors.businessName.message}
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <Label htmlFor="ruc">RUC *</Label>
-                  <Input
-                    {...createForm.register('ruc')}
-                    placeholder="80012345-1"
-                  />
-                  {createForm.formState.errors.ruc && (
-                    <p className="text-sm text-destructive mt-1">
-                      {createForm.formState.errors.ruc.message}
-                    </p>
-                  )}
-                </div>
-
-                <div className="md:col-span-2">
-                  <Label htmlFor="address">Dirección *</Label>
-                  <Textarea
-                    {...createForm.register('address')}
-                    placeholder="Dirección completa"
-                  />
-                  {createForm.formState.errors.address && (
-                    <p className="text-sm text-destructive mt-1">
-                      {createForm.formState.errors.address.message}
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <Label htmlFor="email">Email *</Label>
-                  <Input
-                    {...createForm.register('email')}
-                    type="email"
-                    placeholder="contacto@empresa.com.py"
-                  />
-                  {createForm.formState.errors.email && (
-                    <p className="text-sm text-destructive mt-1">
-                      {createForm.formState.errors.email.message}
-                    </p>
-                  )}
-                </div>
-
-                              <div>
-                <Label htmlFor="phone">Teléfono *</Label>
-                <Input
-                  {...createForm.register('phones.0')}
-                  placeholder="021-123-456"
-                />
-                {createForm.formState.errors.phones && (
-                  <p className="text-sm text-destructive mt-1">
-                    {createForm.formState.errors.phones.message}
-                  </p>
-                )}
-              </div>
-
-              <div className="md:col-span-2">
-                <Label htmlFor="productTypes">Tipos de Productos *</Label>
-                <div className="grid grid-cols-2 gap-2 mt-2">
-                  {availableProductTypes.map((productType) => (
-                    <div key={productType.id} className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        id={`productType-${productType.id}`}
-                        value={productType.id}
-                        checked={createForm.watch('productTypes')?.includes(productType.id) || false}
-                        onChange={(e) => {
-                          const currentTypes = createForm.watch('productTypes') || [];
-                          if (e.target.checked) {
-                            createForm.setValue('productTypes', [...currentTypes, productType.id]);
-                          } else {
-                            createForm.setValue('productTypes', currentTypes.filter(id => id !== productType.id));
-                          }
-                        }}
-                        className="rounded border-gray-300"
-                      />
-                      <Label htmlFor={`productType-${productType.id}`} className="text-sm">
-                        {productType.name} ({productType.code})
-                      </Label>
-                    </div>
-                  ))}
-                </div>
-                {createForm.formState.errors.productTypes && (
-                  <p className="text-sm text-destructive mt-1">
-                    {createForm.formState.errors.productTypes.message}
-                  </p>
-                )}
-              </div>
-
-                {createForm.watch('type') === 'contract' && (
-                  <>
-                    <div>
-                      <Label htmlFor="contractNumber">Número de Contrato</Label>
-                      <Input
-                        {...createForm.register('contractNumber')}
-                        placeholder="CON-2024-001"
-                      />
-                    </div>
-
-                    <div>
-                      <Label htmlFor="contractStartDate">Fecha de Inicio</Label>
-                      <Input
-                        {...createForm.register('contractStartDate')}
-                        type="date"
-                      />
-                    </div>
-
-                    <div>
-                      <Label htmlFor="deliveryFrequency">Frecuencia de Entrega</Label>
-                      <Select 
-                        value={createForm.watch('deliveryFrequency')} 
-                        onValueChange={(value) => createForm.setValue('deliveryFrequency', value as any)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Seleccione frecuencia" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {deliveryFrequencies.map(freq => (
-                            <SelectItem key={freq.value} value={freq.value}>
-                              {freq.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </>
-                )}
-              </div>
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-                  Cancelar
-                </Button>
-                <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? 'Creando...' : 'Crear Proveedor'}
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
+        <Button onClick={() => setIsCreateDialogOpen(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          Nuevo Proveedor
+        </Button>
       </div>
 
-      {/* Filters */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Filter className="h-5 w-5" />
-            Filtros
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-4">
-            <div>
-              <Label htmlFor="search">Buscar</Label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="search"
-                  placeholder="Buscar por nombre, RUC o email..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            </div>
-            <div>
-              <Label htmlFor="filterType">Tipo</Label>
-              <Select value={filterType} onValueChange={setFilterType}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Todos los tipos" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="contract">Por Contrato</SelectItem>
-                  <SelectItem value="recurrent">Recurrente</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="filterStatus">Estado</Label>
-              <Select value={filterStatus} onValueChange={setFilterStatus}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Todos los estados" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="active">Activo</SelectItem>
-                  <SelectItem value="inactive">Inactivo</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="flex items-center space-x-2">
+            <Search className="h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar proveedores..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="max-w-sm"
+            />
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Providers Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Lista de Proveedores</CardTitle>
-          <CardDescription>
-            {filteredProviders.length} proveedores encontrados
-          </CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Proveedor</TableHead>
-                <TableHead>Tipo</TableHead>
+                <TableHead>Nombre</TableHead>
                 <TableHead>Contacto</TableHead>
-                                  <TableHead>Tipos de Productos</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Teléfono</TableHead>
+                <TableHead>Tipos de Productos</TableHead>
                 <TableHead>Estado</TableHead>
-                <TableHead>Acciones</TableHead>
+                <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredProviders.map((provider) => (
                 <TableRow key={provider.id}>
+                  <TableCell className="font-medium">{provider.name}</TableCell>
+                  <TableCell>{provider.contact}</TableCell>
+                  <TableCell>{provider.email}</TableCell>
+                  <TableCell>{provider.phone}</TableCell>
                   <TableCell>
-                    <div>
-                      <div className="font-medium">{provider.businessName}</div>
-                      <div className="text-sm text-muted-foreground">{provider.ruc}</div>
-                    </div>
+                    {getProductTypesNames(provider.product_types || [])}
                   </TableCell>
-                  <TableCell>
-                    {getTypeBadge(provider.type)}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Mail className="h-4 w-4" />
-                      <span className="text-sm">{provider.email}</span>
-                    </div>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Phone className="h-4 w-4" />
-                      <span className="text-sm">{provider.phones[0]}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="text-sm">
-                      {getProductTypesNames(provider.productTypes || [])}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {getStatusBadge(provider.status)}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Button variant="ghost" size="sm" onClick={() => openEditDialog(provider)}>
+                  <TableCell>{getStatusBadge(provider.status)}</TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end space-x-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openViewDialog(provider)}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openEditDialog(provider)}
+                      >
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleDeleteProvider(provider.id)}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDeleteProvider(provider.id)}
+                        disabled={isDeleting}
+                      >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
@@ -580,207 +299,343 @@ export function ProvidersPage() {
               ))}
             </TableBody>
           </Table>
+          
+          {filteredProviders.length === 0 && (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">
+                {searchQuery ? 'No se encontraron proveedores' : 'No hay proveedores registrados'}
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      {/* Edit Dialog */}
+      {/* Dialog para crear proveedor */}
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Nuevo Proveedor</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={createForm.handleSubmit(handleCreateProvider)} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="name">Nombre</Label>
+                <Input
+                  id="name"
+                  {...createForm.register('name')}
+                  className={createForm.formState.errors.name ? 'border-red-500' : ''}
+                />
+                {createForm.formState.errors.name && (
+                  <p className="text-sm text-red-500 mt-1">
+                    {createForm.formState.errors.name.message}
+                  </p>
+                )}
+              </div>
+              <div>
+                <Label htmlFor="contact">Contacto</Label>
+                <Input
+                  id="contact"
+                  {...createForm.register('contact')}
+                  className={createForm.formState.errors.contact ? 'border-red-500' : ''}
+                />
+                {createForm.formState.errors.contact && (
+                  <p className="text-sm text-red-500 mt-1">
+                    {createForm.formState.errors.contact.message}
+                  </p>
+                )}
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  {...createForm.register('email')}
+                  className={createForm.formState.errors.email ? 'border-red-500' : ''}
+                />
+                {createForm.formState.errors.email && (
+                  <p className="text-sm text-red-500 mt-1">
+                    {createForm.formState.errors.email.message}
+                  </p>
+                )}
+              </div>
+              <div>
+                <Label htmlFor="phone">Teléfono</Label>
+                <Input
+                  id="phone"
+                  {...createForm.register('phone')}
+                  className={createForm.formState.errors.phone ? 'border-red-500' : ''}
+                />
+                {createForm.formState.errors.phone && (
+                  <p className="text-sm text-red-500 mt-1">
+                    {createForm.formState.errors.phone.message}
+                  </p>
+                )}
+              </div>
+            </div>
+            
+            <div>
+              <Label htmlFor="address">Dirección</Label>
+              <Input
+                id="address"
+                {...createForm.register('address')}
+                className={createForm.formState.errors.address ? 'border-red-500' : ''}
+              />
+              {createForm.formState.errors.address && (
+                <p className="text-sm text-red-500 mt-1">
+                  {createForm.formState.errors.address.message}
+                </p>
+              )}
+            </div>
+            
+            <div>
+              <Label>Tipos de Productos</Label>
+              <div className="grid grid-cols-2 gap-2 mt-2">
+                {availableProductTypes.map((type) => (
+                  <div key={type.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`create-${type.id}`}
+                      checked={createForm.watch('productTypes').includes(type.id)}
+                      onCheckedChange={(checked) => {
+                        const currentTypes = createForm.watch('productTypes');
+                        if (checked) {
+                          createForm.setValue('productTypes', [...currentTypes, type.id]);
+                        } else {
+                          createForm.setValue('productTypes', currentTypes.filter(id => id !== type.id));
+                        }
+                      }}
+                    />
+                    <Label htmlFor={`create-${type.id}`} className="text-sm">
+                      {type.name}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+              {createForm.formState.errors.productTypes && (
+                <p className="text-sm text-red-500 mt-1">
+                  {createForm.formState.errors.productTypes.message}
+                </p>
+              )}
+            </div>
+            
+            <div>
+              <Label htmlFor="status">Estado</Label>
+              <select
+                id="status"
+                {...createForm.register('status')}
+                className="w-full p-2 border rounded-md"
+              >
+                {statusOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              {createForm.formState.errors.status && (
+                <p className="text-sm text-red-500 mt-1">
+                  {createForm.formState.errors.status.message}
+                </p>
+              )}
+            </div>
+            
+            <div className="flex justify-end space-x-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsCreateDialogOpen(false)}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit">Crear Proveedor</Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog para editar proveedor */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Editar Proveedor</DialogTitle>
-            <DialogDescription>
-              Modifique la información del proveedor seleccionado.
-            </DialogDescription>
           </DialogHeader>
           <form onSubmit={editForm.handleSubmit(handleEditProvider)} className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="edit-type">Tipo de Proveedor *</Label>
-                <Select 
-                  value={editForm.watch('type')} 
-                  onValueChange={(value) => editForm.setValue('type', value as 'contract' | 'recurrent')}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccione el tipo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {providerTypes.map(type => (
-                      <SelectItem key={type.value} value={type.value}>
-                        {type.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {editForm.formState.errors.type && (
-                  <p className="text-sm text-destructive mt-1">
-                    {editForm.formState.errors.type.message}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <Label htmlFor="edit-status">Estado</Label>
-                <Select 
-                  value={editForm.watch('status')} 
-                  onValueChange={(value) => editForm.setValue('status', value as 'active' | 'inactive')}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccione el estado" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="active">Activo</SelectItem>
-                    <SelectItem value="inactive">Inactivo</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="edit-businessName">Razón Social *</Label>
+                <Label htmlFor="edit-name">Nombre</Label>
                 <Input
-                  {...editForm.register('businessName')}
-                  placeholder="Nombre de la empresa"
+                  id="edit-name"
+                  {...editForm.register('name')}
+                  className={editForm.formState.errors.name ? 'border-red-500' : ''}
                 />
-                {editForm.formState.errors.businessName && (
-                  <p className="text-sm text-destructive mt-1">
-                    {editForm.formState.errors.businessName.message}
+                {editForm.formState.errors.name && (
+                  <p className="text-sm text-red-500 mt-1">
+                    {editForm.formState.errors.name.message}
                   </p>
                 )}
               </div>
-
               <div>
-                <Label htmlFor="edit-ruc">RUC *</Label>
+                <Label htmlFor="edit-contact">Contacto</Label>
                 <Input
-                  {...editForm.register('ruc')}
-                  placeholder="80012345-1"
+                  id="edit-contact"
+                  {...editForm.register('contact')}
+                  className={editForm.formState.errors.contact ? 'border-red-500' : ''}
                 />
-                {editForm.formState.errors.ruc && (
-                  <p className="text-sm text-destructive mt-1">
-                    {editForm.formState.errors.ruc.message}
+                {editForm.formState.errors.contact && (
+                  <p className="text-sm text-red-500 mt-1">
+                    {editForm.formState.errors.contact.message}
                   </p>
                 )}
               </div>
-
-              <div className="md:col-span-2">
-                <Label htmlFor="edit-address">Dirección *</Label>
-                <Textarea
-                  {...editForm.register('address')}
-                  placeholder="Dirección completa"
-                />
-                {editForm.formState.errors.address && (
-                  <p className="text-sm text-destructive mt-1">
-                    {editForm.formState.errors.address.message}
-                  </p>
-                )}
-              </div>
-
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="edit-email">Email *</Label>
+                <Label htmlFor="edit-email">Email</Label>
                 <Input
-                  {...editForm.register('email')}
+                  id="edit-email"
                   type="email"
-                  placeholder="contacto@empresa.com.py"
+                  {...editForm.register('email')}
+                  className={editForm.formState.errors.email ? 'border-red-500' : ''}
                 />
                 {editForm.formState.errors.email && (
-                  <p className="text-sm text-destructive mt-1">
+                  <p className="text-sm text-red-500 mt-1">
                     {editForm.formState.errors.email.message}
                   </p>
                 )}
               </div>
-
               <div>
-                <Label htmlFor="edit-phone">Teléfono *</Label>
+                <Label htmlFor="edit-phone">Teléfono</Label>
                 <Input
-                  {...editForm.register('phones.0')}
-                  placeholder="021-123-456"
+                  id="edit-phone"
+                  {...editForm.register('phone')}
+                  className={editForm.formState.errors.phone ? 'border-red-500' : ''}
                 />
-                {editForm.formState.errors.phones && (
-                  <p className="text-sm text-destructive mt-1">
-                    {editForm.formState.errors.phones.message}
+                {editForm.formState.errors.phone && (
+                  <p className="text-sm text-red-500 mt-1">
+                    {editForm.formState.errors.phone.message}
                   </p>
                 )}
               </div>
-
-              <div className="md:col-span-2">
-                <Label htmlFor="edit-productTypes">Tipos de Productos *</Label>
-                <div className="grid grid-cols-2 gap-2 mt-2">
-                  {availableProductTypes.map((productType) => (
-                    <div key={productType.id} className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        id={`edit-productType-${productType.id}`}
-                        value={productType.id}
-                        checked={editForm.watch('productTypes')?.includes(productType.id) || false}
-                        onChange={(e) => {
-                          const currentTypes = editForm.watch('productTypes') || [];
-                          if (e.target.checked) {
-                            editForm.setValue('productTypes', [...currentTypes, productType.id]);
-                          } else {
-                            editForm.setValue('productTypes', currentTypes.filter(id => id !== productType.id));
-                          }
-                        }}
-                        className="rounded border-gray-300"
-                      />
-                      <Label htmlFor={`edit-productType-${productType.id}`} className="text-sm">
-                        {productType.name} ({productType.code})
-                      </Label>
-                    </div>
-                  ))}
-                </div>
-                {editForm.formState.errors.productTypes && (
-                  <p className="text-sm text-destructive mt-1">
-                    {editForm.formState.errors.productTypes.message}
-                  </p>
-                )}
-              </div>
-
-              {editForm.watch('type') === 'contract' && (
-                <>
-                  <div>
-                    <Label htmlFor="edit-contractNumber">Número de Contrato</Label>
-                    <Input
-                      {...editForm.register('contractNumber')}
-                      placeholder="CON-2024-001"
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="edit-contractStartDate">Fecha de Inicio</Label>
-                    <Input
-                      {...editForm.register('contractStartDate')}
-                      type="date"
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="edit-deliveryFrequency">Frecuencia de Entrega</Label>
-                    <Select 
-                      value={editForm.watch('deliveryFrequency')} 
-                      onValueChange={(value) => editForm.setValue('deliveryFrequency', value as any)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleccione frecuencia" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {deliveryFrequencies.map(freq => (
-                          <SelectItem key={freq.value} value={freq.value}>
-                            {freq.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </>
+            </div>
+            
+            <div>
+              <Label htmlFor="edit-address">Dirección</Label>
+              <Input
+                id="edit-address"
+                {...editForm.register('address')}
+                className={editForm.formState.errors.address ? 'border-red-500' : ''}
+              />
+              {editForm.formState.errors.address && (
+                <p className="text-sm text-red-500 mt-1">
+                  {editForm.formState.errors.address.message}
+                </p>
               )}
             </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+            
+            <div>
+              <Label>Tipos de Productos</Label>
+              <div className="grid grid-cols-2 gap-2 mt-2">
+                {availableProductTypes.map((type) => (
+                  <div key={type.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`edit-${type.id}`}
+                      checked={editForm.watch('productTypes').includes(type.id)}
+                      onCheckedChange={(checked) => {
+                        const currentTypes = editForm.watch('productTypes');
+                        if (checked) {
+                          editForm.setValue('productTypes', [...currentTypes, type.id]);
+                        } else {
+                          editForm.setValue('productTypes', currentTypes.filter(id => id !== type.id));
+                        }
+                      }}
+                    />
+                    <Label htmlFor={`edit-${type.id}`} className="text-sm">
+                      {type.name}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+              {editForm.formState.errors.productTypes && (
+                <p className="text-sm text-red-500 mt-1">
+                  {editForm.formState.errors.productTypes.message}
+                </p>
+              )}
+            </div>
+            
+            <div>
+              <Label htmlFor="edit-status">Estado</Label>
+              <select
+                id="edit-status"
+                {...editForm.register('status')}
+                className="w-full p-2 border rounded-md"
+              >
+                {statusOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              {editForm.formState.errors.status && (
+                <p className="text-sm text-red-500 mt-1">
+                  {editForm.formState.errors.status.message}
+                </p>
+              )}
+            </div>
+            
+            <div className="flex justify-end space-x-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsEditDialogOpen(false)}
+              >
                 Cancelar
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? 'Guardando...' : 'Guardar Cambios'}
-              </Button>
-            </DialogFooter>
+              <Button type="submit">Actualizar Proveedor</Button>
+            </div>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog para ver proveedor */}
+      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Detalles del Proveedor</DialogTitle>
+          </DialogHeader>
+          {selectedProvider && (
+            <div className="space-y-4">
+              <div>
+                <Label className="font-semibold">Nombre:</Label>
+                <p>{selectedProvider.name}</p>
+              </div>
+              <div>
+                <Label className="font-semibold">Contacto:</Label>
+                <p>{selectedProvider.contact}</p>
+              </div>
+              <div>
+                <Label className="font-semibold">Email:</Label>
+                <p>{selectedProvider.email}</p>
+              </div>
+              <div>
+                <Label className="font-semibold">Teléfono:</Label>
+                <p>{selectedProvider.phone}</p>
+              </div>
+              <div>
+                <Label className="font-semibold">Dirección:</Label>
+                <p>{selectedProvider.address}</p>
+              </div>
+              <div>
+                <Label className="font-semibold">Tipos de Productos:</Label>
+                <p>{getProductTypesNames(selectedProvider.product_types || [])}</p>
+              </div>
+              <div>
+                <Label className="font-semibold">Estado:</Label>
+                <div className="mt-1">{getStatusBadge(selectedProvider.status)}</div>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
