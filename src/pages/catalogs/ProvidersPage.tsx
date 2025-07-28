@@ -36,8 +36,7 @@ const providerSchema = z.object({
   address: z.string().min(5, 'La dirección debe tener al menos 5 caracteres'),
   email: z.string().email('Email inválido'),
   phones: z.array(z.string()).min(1, 'Debe agregar al menos un teléfono'),
-  categories: z.array(z.string()).optional(),
-  associatedProducts: z.array(z.string()).optional(),
+  productTypes: z.array(z.string()).min(1, 'Debe seleccionar al menos un tipo de producto'),
   contractNumber: z.string().optional(),
   contractStartDate: z.string().optional(),
   deliveryFrequency: z.enum(['daily', 'weekly', 'monthly']).optional(),
@@ -45,6 +44,18 @@ const providerSchema = z.object({
 });
 
 type ProviderFormData = z.infer<typeof providerSchema>;
+
+// Mock data for product types (available for selection)
+const availableProductTypes = [
+  { id: '1', name: 'Materia Prima', code: 'MP', category: 'raw_material' },
+  { id: '2', name: 'Producto Terminado', code: 'PT', category: 'finished_product' },
+  { id: '3', name: 'Embalaje', code: 'EMB', category: 'packaging' },
+  { id: '4', name: 'Lácteos', code: 'LAC', category: 'finished_product' },
+  { id: '5', name: 'Cárnicos', code: 'CAR', category: 'finished_product' },
+  { id: '6', name: 'Granos', code: 'GRA', category: 'raw_material' },
+  { id: '7', name: 'Frutas y Verduras', code: 'FV', category: 'raw_material' },
+  { id: '8', name: 'Bebidas', code: 'BEB', category: 'finished_product' }
+];
 
 // Mock data for development
 const mockProviders: Provider[] = [
@@ -64,8 +75,9 @@ const mockProviders: Provider[] = [
         email: 'juan.perez@lacteosdelsur.com.py'
       }
     ],
-    categories: ['Leche', 'Queso'],
+    categories: ['Lácteos', 'Materia Prima'],
     associatedProducts: ['Leche entera', 'Queso paraguay'],
+    productTypes: ['4', '1'], // IDs de los tipos de productos
     contractFile: 'contrato_lacteos_sur.pdf',
     contractNumber: 'CON-2024-001',
     contractStartDate: new Date('2024-01-15'),
@@ -90,8 +102,9 @@ const mockProviders: Provider[] = [
         email: 'maria.gonzalez@granjasanmiguel.com.py'
       }
     ],
-    categories: ['Huevos', 'Pollo'],
+    categories: ['Cárnicos', 'Materia Prima'],
     associatedProducts: ['Huevos frescos', 'Pollo entero'],
+    productTypes: ['5', '1'], // IDs de los tipos de productos
     status: 'active',
     createdAt: new Date('2024-01-05'),
     updatedAt: new Date('2024-01-12')
@@ -125,8 +138,7 @@ export function ProvidersPage() {
       type: 'recurrent',
       status: 'active',
       phones: [''],
-      categories: [],
-      associatedProducts: []
+      productTypes: []
     }
   });
 
@@ -155,6 +167,8 @@ export function ProvidersPage() {
         id: Date.now().toString(),
         ...data,
         contacts: [],
+        categories: [],
+        associatedProducts: [],
         contractFile: undefined,
         createdAt: new Date(),
         updatedAt: new Date()
@@ -199,8 +213,7 @@ export function ProvidersPage() {
       address: provider.address,
       email: provider.email,
       phones: provider.phones,
-      categories: provider.categories,
-      associatedProducts: provider.associatedProducts,
+      productTypes: provider.productTypes || [],
       contractNumber: provider.contractNumber,
       contractStartDate: provider.contractStartDate?.toISOString().split('T')[0],
       deliveryFrequency: provider.deliveryFrequency,
@@ -224,6 +237,13 @@ export function ProvidersPage() {
         {status === 'active' ? 'Activo' : 'Inactivo'}
       </Badge>
     );
+  };
+
+  const getProductTypesNames = (productTypeIds: string[]) => {
+    return productTypeIds
+      .map(id => availableProductTypes.find(pt => pt.id === id)?.name)
+      .filter(Boolean)
+      .join(', ');
   };
 
   return (
@@ -345,18 +365,51 @@ export function ProvidersPage() {
                   )}
                 </div>
 
-                <div>
-                  <Label htmlFor="phone">Teléfono *</Label>
-                  <Input
-                    {...createForm.register('phones.0')}
-                    placeholder="021-123-456"
-                  />
-                  {createForm.formState.errors.phones && (
-                    <p className="text-sm text-destructive mt-1">
-                      {createForm.formState.errors.phones.message}
-                    </p>
-                  )}
+                              <div>
+                <Label htmlFor="phone">Teléfono *</Label>
+                <Input
+                  {...createForm.register('phones.0')}
+                  placeholder="021-123-456"
+                />
+                {createForm.formState.errors.phones && (
+                  <p className="text-sm text-destructive mt-1">
+                    {createForm.formState.errors.phones.message}
+                  </p>
+                )}
+              </div>
+
+              <div className="md:col-span-2">
+                <Label htmlFor="productTypes">Tipos de Productos *</Label>
+                <div className="grid grid-cols-2 gap-2 mt-2">
+                  {availableProductTypes.map((productType) => (
+                    <div key={productType.id} className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id={`productType-${productType.id}`}
+                        value={productType.id}
+                        checked={createForm.watch('productTypes')?.includes(productType.id) || false}
+                        onChange={(e) => {
+                          const currentTypes = createForm.watch('productTypes') || [];
+                          if (e.target.checked) {
+                            createForm.setValue('productTypes', [...currentTypes, productType.id]);
+                          } else {
+                            createForm.setValue('productTypes', currentTypes.filter(id => id !== productType.id));
+                          }
+                        }}
+                        className="rounded border-gray-300"
+                      />
+                      <Label htmlFor={`productType-${productType.id}`} className="text-sm">
+                        {productType.name} ({productType.code})
+                      </Label>
+                    </div>
+                  ))}
                 </div>
+                {createForm.formState.errors.productTypes && (
+                  <p className="text-sm text-destructive mt-1">
+                    {createForm.formState.errors.productTypes.message}
+                  </p>
+                )}
+              </div>
 
                 {createForm.watch('type') === 'contract' && (
                   <>
@@ -478,7 +531,7 @@ export function ProvidersPage() {
                 <TableHead>Proveedor</TableHead>
                 <TableHead>Tipo</TableHead>
                 <TableHead>Contacto</TableHead>
-                <TableHead>Productos</TableHead>
+                                  <TableHead>Tipos de Productos</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead>Acciones</TableHead>
               </TableRow>
@@ -507,8 +560,7 @@ export function ProvidersPage() {
                   </TableCell>
                   <TableCell>
                     <div className="text-sm">
-                      {provider.associatedProducts?.slice(0, 2).join(', ')}
-                      {provider.associatedProducts && provider.associatedProducts.length > 2 && '...'}
+                      {getProductTypesNames(provider.productTypes || [])}
                     </div>
                   </TableCell>
                   <TableCell>
@@ -644,6 +696,39 @@ export function ProvidersPage() {
                 {editForm.formState.errors.phones && (
                   <p className="text-sm text-destructive mt-1">
                     {editForm.formState.errors.phones.message}
+                  </p>
+                )}
+              </div>
+
+              <div className="md:col-span-2">
+                <Label htmlFor="edit-productTypes">Tipos de Productos *</Label>
+                <div className="grid grid-cols-2 gap-2 mt-2">
+                  {availableProductTypes.map((productType) => (
+                    <div key={productType.id} className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id={`edit-productType-${productType.id}`}
+                        value={productType.id}
+                        checked={editForm.watch('productTypes')?.includes(productType.id) || false}
+                        onChange={(e) => {
+                          const currentTypes = editForm.watch('productTypes') || [];
+                          if (e.target.checked) {
+                            editForm.setValue('productTypes', [...currentTypes, productType.id]);
+                          } else {
+                            editForm.setValue('productTypes', currentTypes.filter(id => id !== productType.id));
+                          }
+                        }}
+                        className="rounded border-gray-300"
+                      />
+                      <Label htmlFor={`edit-productType-${productType.id}`} className="text-sm">
+                        {productType.name} ({productType.code})
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+                {editForm.formState.errors.productTypes && (
+                  <p className="text-sm text-destructive mt-1">
+                    {editForm.formState.errors.productTypes.message}
                   </p>
                 )}
               </div>
