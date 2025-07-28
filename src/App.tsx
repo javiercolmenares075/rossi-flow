@@ -24,8 +24,6 @@ import { StockPage } from './pages/inventory/StockPage';
 import { BatchesPage } from './pages/inventory/BatchesPage';
 import { BulkEntryPage } from './pages/inventory/BulkEntryPage';
 import { PaymentsPage } from './pages/payments/PaymentsPage';
-import { NewPaymentPage } from './pages/payments/NewPaymentPage';
-import { PaymentHistoryPage } from './pages/payments/PaymentHistoryPage';
 import { ProductionRecipesPage } from './pages/production/ProductionRecipesPage';
 import { ProductionOrdersPage } from './pages/production/ProductionOrdersPage';
 import { ProductionTrackingPage } from './pages/production/ProductionTrackingPage';
@@ -74,8 +72,6 @@ function App() {
               
               {/* Payments */}
               <Route path="/payments" element={<PaymentsPage />} />
-              <Route path="/payments/new" element={<NewPaymentPage />} />
-              <Route path="/payments/history" element={<PaymentHistoryPage />} />
               
               {/* Production */}
               <Route path="/production/recipes" element={<ProductionRecipesPage />} />
