@@ -139,7 +139,7 @@ const purchaseOrderSchema = z.object({
 
 type PurchaseOrderFormData = z.infer<typeof purchaseOrderSchema>;
 
-export function NewPurchaseOrderPage() {
+export default function NewPurchaseOrderPage() {
   const [selectedProvider, setSelectedProvider] = useState<Provider | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);

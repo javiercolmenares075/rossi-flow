@@ -99,7 +99,7 @@ const departments = [
   { value: 'sales', label: 'Ventas' }
 ];
 
-export function EmployeesPage() {
+export default function EmployeesPage() {
   const [employees, setEmployees] = useState(mockEmployees);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterDepartment, setFilterDepartment] = useState<string>('all');

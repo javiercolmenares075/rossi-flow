@@ -214,7 +214,7 @@ const mockProductionOrders: ProductionOrder[] = [
   }
 ];
 
-export function ProductionOrdersPage() {
+export default function ProductionOrdersPage() {
   const [productionOrders, setProductionOrders] = useState<ProductionOrder[]>(mockProductionOrders);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');

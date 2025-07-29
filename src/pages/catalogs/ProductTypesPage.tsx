@@ -74,7 +74,7 @@ const categories = [
   { value: 'other', label: 'Otros' }
 ];
 
-export function ProductTypesPage() {
+export default function ProductTypesPage() {
   const [productTypes, setProductTypes] = useState(mockProductTypes);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState<string>('all');

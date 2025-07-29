@@ -110,7 +110,7 @@ const paymentTypes = [
   { value: 'card', label: 'Tarjeta' }
 ];
 
-export function PaymentsPage() {
+export default function PaymentsPage() {
   const [pendingOrders, setPendingOrders] = useState(mockPendingOrders);
   const [payments, setPayments] = useState(mockPayments);
   const [searchTerm, setSearchTerm] = useState('');

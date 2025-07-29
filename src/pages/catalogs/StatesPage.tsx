@@ -117,7 +117,7 @@ const colors = [
   { value: 'warning', label: 'Advertencia' }
 ];
 
-export function StatesPage() {
+export default function StatesPage() {
   const [states, setStates] = useState(mockStates);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);

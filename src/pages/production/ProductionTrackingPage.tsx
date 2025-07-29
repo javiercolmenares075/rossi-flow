@@ -12,7 +12,7 @@ import {
   Target
 } from 'lucide-react';
 
-export function ProductionTrackingPage() {
+export default function ProductionTrackingPage() {
   const [orders] = useState([
     {
       id: '1',

@@ -1,6 +1,6 @@
 import { PlaceholderPage } from '@/components/ui/PlaceholderPage';
 
-export function InventoryMovementsPage() {
+export default function InventoryMovementsPage() {
   return (
     <PlaceholderPage
       title="Movimientos de Inventario"

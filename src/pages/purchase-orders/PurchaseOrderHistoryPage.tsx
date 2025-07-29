@@ -1,6 +1,6 @@
 import { PlaceholderPage } from '@/components/ui/PlaceholderPage';
 
-export function PurchaseOrderHistoryPage() {
+export default function PurchaseOrderHistoryPage() {
   return (
     <PlaceholderPage
       title="Historial de Órdenes de Compra"

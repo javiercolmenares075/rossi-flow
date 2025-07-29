@@ -1,6 +1,6 @@
 import { PlaceholderPage } from '@/components/ui/PlaceholderPage';
 
-export function BatchesPage() {
+export default function BatchesPage() {
   return (
     <PlaceholderPage
       title="Lotes"

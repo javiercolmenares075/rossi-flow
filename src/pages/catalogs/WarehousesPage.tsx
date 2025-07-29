@@ -88,7 +88,7 @@ const warehouseTypes = [
   { value: 'dry_storage', label: 'Almacén Seco' }
 ];
 
-export function WarehousesPage() {
+export default function WarehousesPage() {
   const [warehouses, setWarehouses] = useState(mockWarehouses);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<string>('all');

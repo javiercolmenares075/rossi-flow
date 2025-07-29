@@ -87,7 +87,7 @@ const mockStorageTypes: StorageType[] = [
   }
 ];
 
-export function StorageTypesPage() {
+export default function StorageTypesPage() {
   const [storageTypes, setStorageTypes] = useState<StorageType[]>(mockStorageTypes);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');

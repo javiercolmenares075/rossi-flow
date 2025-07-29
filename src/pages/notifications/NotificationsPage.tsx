@@ -116,7 +116,7 @@ const priorities = [
   { value: 'critical', label: 'Crítica', color: 'bg-red-100 text-red-800' }
 ];
 
-export function NotificationsPage() {
+export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>(mockNotifications);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<string>('all');

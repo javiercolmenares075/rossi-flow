@@ -1,6 +1,6 @@
 import { PlaceholderPage } from '@/components/ui/PlaceholderPage';
 
-export function BulkEntryPage() {
+export default function BulkEntryPage() {
   return (
     <PlaceholderPage
       title="Ingreso Masivo"

@@ -1,6 +1,6 @@
 import { PlaceholderPage } from '@/components/ui/PlaceholderPage';
 
-export function StockPage() {
+export default function StockPage() {
   return (
     <PlaceholderPage
       title="Stock"

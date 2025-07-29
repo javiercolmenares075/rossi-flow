@@ -127,7 +127,7 @@ const mockPurchaseOrders: PurchaseOrder[] = [
   }
 ];
 
-export function PurchaseOrdersPage() {
+export default function PurchaseOrdersPage() {
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>(mockPurchaseOrders);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');

@@ -62,7 +62,7 @@ const units = [
   { value: 'oz', label: 'Onzas (oz)' }
 ];
 
-export function WeighingTypesPage() {
+export default function WeighingTypesPage() {
   const [weighingTypes, setWeighingTypes] = useState(mockWeighingTypes);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);

@@ -7,27 +7,27 @@ import { ProductosView } from './components/Modules/ProductosView';
 import { ProveedoresView } from './components/Modules/ProveedoresView';
 
 // Import all the new components we'll create
-import { ProvidersPage } from './pages/catalogs/ProvidersPage';
-import { ProductsPage } from './pages/catalogs/ProductsPage';
-import { ProductTypesPage } from './pages/catalogs/ProductTypesPage';
-import { StorageTypesPage } from './pages/catalogs/StorageTypesPage';
-import { WarehousesPage } from './pages/catalogs/WarehousesPage';
-import { WeighingTypesPage } from './pages/catalogs/WeighingTypesPage';
-import { EmployeesPage } from './pages/catalogs/EmployeesPage';
-import { StatesPage } from './pages/catalogs/StatesPage';
-import { PaymentTypesPage } from './pages/catalogs/PaymentTypesPage';
-import { PurchaseOrdersPage } from './pages/purchase-orders/PurchaseOrdersPage';
-import { NewPurchaseOrderPage } from './pages/purchase-orders/NewPurchaseOrderPage';
-import { PurchaseOrderHistoryPage } from './pages/purchase-orders/PurchaseOrderHistoryPage';
-import { InventoryMovementsPage } from './pages/inventory/InventoryMovementsPage';
-import { StockPage } from './pages/inventory/StockPage';
-import { BatchesPage } from './pages/inventory/BatchesPage';
-import { BulkEntryPage } from './pages/inventory/BulkEntryPage';
-import { PaymentsPage } from './pages/payments/PaymentsPage';
-import { ProductionRecipesPage } from './pages/production/ProductionRecipesPage';
-import { ProductionOrdersPage } from './pages/production/ProductionOrdersPage';
-import { ProductionTrackingPage } from './pages/production/ProductionTrackingPage';
-import { NotificationsPage } from './pages/notifications/NotificationsPage';
+import ProvidersPage from './pages/catalogs/ProvidersPage';
+import ProductsPage from './pages/catalogs/ProductsPage';
+import ProductTypesPage from './pages/catalogs/ProductTypesPage';
+import StorageTypesPage from './pages/catalogs/StorageTypesPage';
+import WarehousesPage from './pages/catalogs/WarehousesPage';
+import WeighingTypesPage from './pages/catalogs/WeighingTypesPage';
+import EmployeesPage from './pages/catalogs/EmployeesPage';
+import StatesPage from './pages/catalogs/StatesPage';
+import PaymentTypesPage from './pages/catalogs/PaymentTypesPage';
+import PurchaseOrdersPage from './pages/purchase-orders/PurchaseOrdersPage';
+import NewPurchaseOrderPage from './pages/purchase-orders/NewPurchaseOrderPage';
+import PurchaseOrderHistoryPage from './pages/purchase-orders/PurchaseOrderHistoryPage';
+import InventoryMovementsPage from './pages/inventory/InventoryMovementsPage';
+import StockPage from './pages/inventory/StockPage';
+import BatchesPage from './pages/inventory/BatchesPage';
+import BulkEntryPage from './pages/inventory/BulkEntryPage';
+import PaymentsPage from './pages/payments/PaymentsPage';
+import ProductionRecipesPage from './pages/production/ProductionRecipesPage';
+import ProductionOrdersPage from './pages/production/ProductionOrdersPage';
+import ProductionTrackingPage from './pages/production/ProductionTrackingPage';
+import NotificationsPage from './pages/notifications/NotificationsPage';
 
 // Placeholder components for pages not yet implemented
 import { PlaceholderPage } from './components/ui/PlaceholderPage';

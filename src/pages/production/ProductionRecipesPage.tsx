@@ -170,7 +170,7 @@ const mockRecipes: Recipe[] = [
   }
 ];
 
-export function ProductionRecipesPage() {
+export default function ProductionRecipesPage() {
   const [recipes, setRecipes] = useState<Recipe[]>(mockRecipes);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');

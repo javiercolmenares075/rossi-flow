@@ -81,7 +81,7 @@ const categories = [
   { value: 'digital', label: 'Digital' }
 ];
 
-export function PaymentTypesPage() {
+export default function PaymentTypesPage() {
   const [paymentTypes, setPaymentTypes] = useState(mockPaymentTypes);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
