@@ -36,7 +36,7 @@ const providerSchema = z.object({
   phone: z.string().optional(),
   email: z.string().email('Email inválido').optional().or(z.literal('')),
   address: z.string().optional(),
-  payment_terms: z.number().default(30),
+  payment_terms: z.string().optional(), // Cambiado de number a string
   product_types: z.array(z.string()).min(1, 'Debe seleccionar al menos un tipo de producto'),
   // Campos adicionales para contratos
   contract_number: z.string().optional(),
@@ -109,7 +109,7 @@ export default function ProvidersPage() {
       phone: '',
       email: '',
       address: '',
-      payment_terms: 30,
+      payment_terms: '30',
       product_types: [],
       contract_number: '',
       contract_start_date: '',
@@ -310,7 +310,7 @@ export default function ProvidersPage() {
                   <TableCell>{provider.contact_person || '-'}</TableCell>
                   <TableCell>{provider.email || '-'}</TableCell>
                   <TableCell>{provider.phone || '-'}</TableCell>
-                  <TableCell>{provider.payment_terms} días</TableCell>
+                  <TableCell>{provider.payment_terms || 'N/A'}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end space-x-2">
                       <Button
