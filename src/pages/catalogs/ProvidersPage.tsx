@@ -37,16 +37,40 @@ const providerSchema = z.object({
   email: z.string().email('Email inválido').optional().or(z.literal('')),
   address: z.string().optional(),
   payment_terms: z.number().default(30),
+  product_types: z.array(z.string()).min(1, 'Debe seleccionar al menos un tipo de producto'),
+  // Campos adicionales para contratos
+  contract_number: z.string().optional(),
+  contract_start_date: z.string().optional(),
+  delivery_frequency: z.string().optional(),
+  contract_file_url: z.string().optional(),
+  status: z.string().default('active'),
 });
 
 type ProviderFormData = z.infer<typeof providerSchema>;
 
-// Tipos de proveedores disponibles
+// Tipos de proveedores disponibles (según MVP)
 const providerTypes = [
-  { value: 'supplier', label: 'Proveedor' },
-  { value: 'contractor', label: 'Contratista' },
-  { value: 'service', label: 'Servicio' },
-  { value: 'other', label: 'Otro' },
+  { value: 'contract', label: 'Contrato' },
+  { value: 'recurrent', label: 'Recurrente' },
+];
+
+// Frecuencias de entrega para contratos
+const deliveryFrequencies = [
+  { value: 'weekly', label: 'Semanal' },
+  { value: 'biweekly', label: 'Quincenal' },
+  { value: 'monthly', label: 'Mensual' },
+];
+
+// Tipos de productos disponibles
+const availableProductTypes = [
+  { id: '1', name: 'Lácteos' },
+  { id: '2', name: 'Cárnicos' },
+  { id: '3', name: 'Granos' },
+  { id: '4', name: 'Verduras' },
+  { id: '5', name: 'Frutas' },
+  { id: '6', name: 'Condimentos' },
+  { id: '7', name: 'Embalajes' },
+  { id: '8', name: 'Equipos' },
 ];
 
 const statusOptions = [
@@ -86,6 +110,12 @@ export default function ProvidersPage() {
       email: '',
       address: '',
       payment_terms: 30,
+      product_types: [],
+      contract_number: '',
+      contract_start_date: '',
+      delivery_frequency: '',
+      contract_file_url: '',
+      status: 'active',
     },
   });
 
@@ -104,6 +134,12 @@ export default function ProvidersPage() {
         email: data.email,
         address: data.address,
         payment_terms: data.payment_terms,
+        product_types: data.product_types,
+        contract_number: data.contract_number,
+        contract_start_date: data.contract_start_date,
+        delivery_frequency: data.delivery_frequency,
+        contract_file_url: data.contract_file_url,
+        status: data.status,
       });
       
       toast.success('Proveedor creado exitosamente');
@@ -128,6 +164,12 @@ export default function ProvidersPage() {
         email: data.email,
         address: data.address,
         payment_terms: data.payment_terms,
+        product_types: data.product_types,
+        contract_number: data.contract_number,
+        contract_start_date: data.contract_start_date,
+        delivery_frequency: data.delivery_frequency,
+        contract_file_url: data.contract_file_url,
+        status: data.status,
       });
       
       toast.success('Proveedor actualizado exitosamente');
@@ -165,6 +207,12 @@ export default function ProvidersPage() {
       email: provider.email,
       address: provider.address,
       payment_terms: provider.payment_terms,
+      product_types: provider.product_types,
+      contract_number: provider.contract_number,
+      contract_start_date: provider.contract_start_date,
+      delivery_frequency: provider.delivery_frequency,
+      contract_file_url: provider.contract_file_url,
+      status: provider.status,
     });
     setIsEditDialogOpen(true);
   };
@@ -446,6 +494,105 @@ export default function ProvidersPage() {
               )}
             </div>
             
+            <div>
+              <Label htmlFor="product_types">Tipos de Productos *</Label>
+              <div className="grid grid-cols-2 gap-2 mt-2">
+                {availableProductTypes.map(type => (
+                  <div key={type.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`create-${type.id}`}
+                      checked={createForm.watch('product_types').includes(type.id)}
+                      onCheckedChange={(checked) => {
+                        const currentTypes = createForm.watch('product_types');
+                        if (checked) {
+                          createForm.setValue('product_types', [...currentTypes, type.id]);
+                        } else {
+                          createForm.setValue('product_types', currentTypes.filter(id => id !== type.id));
+                        }
+                      }}
+                    />
+                    <Label htmlFor={`create-${type.id}`} className="text-sm">
+                      {type.name}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+              {createForm.formState.errors.product_types && (
+                <p className="text-sm text-red-500 mt-1">
+                  {createForm.formState.errors.product_types.message}
+                </p>
+              )}
+            </div>
+
+            {createForm.watch('type') === 'contract' && (
+              <>
+                <div>
+                  <Label htmlFor="contract_number">Número de Contrato</Label>
+                  <Input
+                    id="contract_number"
+                    {...createForm.register('contract_number')}
+                    className={createForm.formState.errors.contract_number ? 'border-red-500' : ''}
+                  />
+                  {createForm.formState.errors.contract_number && (
+                    <p className="text-sm text-red-500 mt-1">
+                      {createForm.formState.errors.contract_number.message}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <Label htmlFor="contract_start_date">Fecha de Inicio del Contrato</Label>
+                  <Input
+                    id="contract_start_date"
+                    type="date"
+                    {...createForm.register('contract_start_date')}
+                    className={createForm.formState.errors.contract_start_date ? 'border-red-500' : ''}
+                  />
+                  {createForm.formState.errors.contract_start_date && (
+                    <p className="text-sm text-red-500 mt-1">
+                      {createForm.formState.errors.contract_start_date.message}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <Label htmlFor="delivery_frequency">Frecuencia de Entrega</Label>
+                  <Select
+                    value={createForm.watch('delivery_frequency')}
+                    onValueChange={(value) => createForm.setValue('delivery_frequency', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccione una frecuencia" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {deliveryFrequencies.map(freq => (
+                        <SelectItem key={freq.value} value={freq.value}>
+                          {freq.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {createForm.formState.errors.delivery_frequency && (
+                    <p className="text-sm text-red-500 mt-1">
+                      {createForm.formState.errors.delivery_frequency.message}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <Label htmlFor="contract_file_url">Archivo del Contrato (opcional)</Label>
+                  <Input
+                    id="contract_file_url"
+                    type="url"
+                    {...createForm.register('contract_file_url')}
+                    className={createForm.formState.errors.contract_file_url ? 'border-red-500' : ''}
+                  />
+                  {createForm.formState.errors.contract_file_url && (
+                    <p className="text-sm text-red-500 mt-1">
+                      {createForm.formState.errors.contract_file_url.message}
+                    </p>
+                  )}
+                </div>
+              </>
+            )}
+            
             <div className="flex justify-end space-x-2">
               <Button
                 type="button"
@@ -541,57 +688,118 @@ export default function ProvidersPage() {
             </div>
             
             <div>
-              <Label>Tipos de Productos</Label>
+              <Label htmlFor="edit-payment_terms">Términos de Pago (días)</Label>
+              <Input
+                id="edit-payment_terms"
+                type="number"
+                {...editForm.register('payment_terms', { valueAsNumber: true })}
+                className={editForm.formState.errors.payment_terms ? 'border-red-500' : ''}
+              />
+              {editForm.formState.errors.payment_terms && (
+                <p className="text-sm text-red-500 mt-1">
+                  {editForm.formState.errors.payment_terms.message}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <Label htmlFor="edit-product_types">Tipos de Productos</Label>
               <div className="grid grid-cols-2 gap-2 mt-2">
-                {/* Assuming availableProductTypes is defined elsewhere or needs to be imported */}
-                {/* For now, using a placeholder or assuming it's defined */}
-                {/* This part of the code was not provided in the original file,
-                    so I'm adding a placeholder to avoid compilation errors.
-                    In a real scenario, this would need to be defined or imported. */}
-                {/* <div key={type.id} className="flex items-center space-x-2">
+                {availableProductTypes.map(type => (
+                  <div key={type.id} className="flex items-center space-x-2">
                     <Checkbox
                       id={`edit-${type.id}`}
-                      checked={editForm.watch('productTypes').includes(type.id)}
+                      checked={editForm.watch('product_types').includes(type.id)}
                       onCheckedChange={(checked) => {
-                        const currentTypes = editForm.watch('productTypes');
+                        const currentTypes = editForm.watch('product_types');
                         if (checked) {
-                          editForm.setValue('productTypes', [...currentTypes, type.id]);
+                          editForm.setValue('product_types', [...currentTypes, type.id]);
                         } else {
-                          editForm.setValue('productTypes', currentTypes.filter(id => id !== type.id));
+                          editForm.setValue('product_types', currentTypes.filter(id => id !== type.id));
                         }
                       }}
                     />
                     <Label htmlFor={`edit-${type.id}`} className="text-sm">
                       {type.name}
                     </Label>
-                  </div> */}
-              </div>
-              {editForm.formState.errors.productTypes && (
-                <p className="text-sm text-red-500 mt-1">
-                  {editForm.formState.errors.productTypes.message}
-                </p>
-              )}
-            </div>
-            
-            <div>
-              <Label htmlFor="edit-status">Estado</Label>
-              <select
-                id="edit-status"
-                {...editForm.register('status')}
-                className="w-full p-2 border rounded-md"
-              >
-                {statusOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
+                  </div>
                 ))}
-              </select>
-              {editForm.formState.errors.status && (
+              </div>
+              {editForm.formState.errors.product_types && (
                 <p className="text-sm text-red-500 mt-1">
-                  {editForm.formState.errors.status.message}
+                  {editForm.formState.errors.product_types.message}
                 </p>
               )}
             </div>
+
+            {editForm.watch('type') === 'contract' && (
+              <>
+                <div>
+                  <Label htmlFor="edit-contract_number">Número de Contrato</Label>
+                  <Input
+                    id="edit-contract_number"
+                    {...editForm.register('contract_number')}
+                    className={editForm.formState.errors.contract_number ? 'border-red-500' : ''}
+                  />
+                  {editForm.formState.errors.contract_number && (
+                    <p className="text-sm text-red-500 mt-1">
+                      {editForm.formState.errors.contract_number.message}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <Label htmlFor="edit-contract_start_date">Fecha de Inicio del Contrato</Label>
+                  <Input
+                    id="edit-contract_start_date"
+                    type="date"
+                    {...editForm.register('contract_start_date')}
+                    className={editForm.formState.errors.contract_start_date ? 'border-red-500' : ''}
+                  />
+                  {editForm.formState.errors.contract_start_date && (
+                    <p className="text-sm text-red-500 mt-1">
+                      {editForm.formState.errors.contract_start_date.message}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <Label htmlFor="edit-delivery_frequency">Frecuencia de Entrega</Label>
+                  <Select
+                    value={editForm.watch('delivery_frequency')}
+                    onValueChange={(value) => editForm.setValue('delivery_frequency', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccione una frecuencia" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {deliveryFrequencies.map(freq => (
+                        <SelectItem key={freq.value} value={freq.value}>
+                          {freq.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {editForm.formState.errors.delivery_frequency && (
+                    <p className="text-sm text-red-500 mt-1">
+                      {editForm.formState.errors.delivery_frequency.message}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <Label htmlFor="edit-contract_file_url">Archivo del Contrato (opcional)</Label>
+                  <Input
+                    id="edit-contract_file_url"
+                    type="url"
+                    {...editForm.register('contract_file_url')}
+                    className={editForm.formState.errors.contract_file_url ? 'border-red-500' : ''}
+                  />
+                  {editForm.formState.errors.contract_file_url && (
+                    <p className="text-sm text-red-500 mt-1">
+                      {editForm.formState.errors.contract_file_url.message}
+                    </p>
+                  )}
+                </div>
+              </>
+            )}
             
             <div className="flex justify-end space-x-2">
               <Button
@@ -637,7 +845,7 @@ export default function ProvidersPage() {
               </div>
               <div>
                 <Label className="font-semibold">Tipos de Productos:</Label>
-                <p>{selectedProvider.product_types?.map(typeId => providerTypes.find(pt => pt.value === typeId)?.label).join(', ') || '-'}</p>
+                <p>{selectedProvider.product_types?.map(typeId => availableProductTypes.find(pt => pt.id === typeId)?.name).join(', ') || '-'}</p>
               </div>
               <div>
                 <Label className="font-semibold">Estado:</Label>
@@ -647,6 +855,26 @@ export default function ProvidersPage() {
                   </Badge>
                 </div>
               </div>
+              {selectedProvider.type === 'contract' && (
+                <>
+                  <div>
+                    <Label className="font-semibold">Número de Contrato:</Label>
+                    <p>{selectedProvider.contract_number || '-'}</p>
+                  </div>
+                  <div>
+                    <Label className="font-semibold">Fecha de Inicio:</Label>
+                    <p>{selectedProvider.contract_start_date || '-'}</p>
+                  </div>
+                  <div>
+                    <Label className="font-semibold">Frecuencia de Entrega:</Label>
+                    <p>{selectedProvider.delivery_frequency || '-'}</p>
+                  </div>
+                  <div>
+                    <Label className="font-semibold">Archivo del Contrato:</Label>
+                    <p>{selectedProvider.contract_file_url ? 'Adjunto' : 'No adjunto'}</p>
+                  </div>
+                </>
+              )}
             </div>
           )}
         </DialogContent>

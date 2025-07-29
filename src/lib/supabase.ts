@@ -89,6 +89,12 @@ export interface Database {
           email: string | null;
           address: string | null;
           payment_terms: number;
+          product_types: string[] | null;
+          contract_number: string | null;
+          contract_start_date: string | null;
+          delivery_frequency: string | null;
+          contract_file_url: string | null;
+          status: string;
           created_at: string;
           updated_at: string;
         };
@@ -102,6 +108,12 @@ export interface Database {
           email?: string | null;
           address?: string | null;
           payment_terms?: number;
+          product_types?: string[] | null;
+          contract_number?: string | null;
+          contract_start_date?: string | null;
+          delivery_frequency?: string | null;
+          contract_file_url?: string | null;
+          status?: string;
           created_at?: string;
           updated_at?: string;
         };
@@ -115,6 +127,12 @@ export interface Database {
           email?: string | null;
           address?: string | null;
           payment_terms?: number;
+          product_types?: string[] | null;
+          contract_number?: string | null;
+          contract_start_date?: string | null;
+          delivery_frequency?: string | null;
+          contract_file_url?: string | null;
+          status?: string;
           created_at?: string;
           updated_at?: string;
         };
