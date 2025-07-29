@@ -36,7 +36,7 @@ const providerSchema = z.object({
   phone: z.string().optional(),
   email: z.string().email('Email inválido').optional().or(z.literal('')),
   address: z.string().optional(),
-  payment_terms: z.string().optional(), // Cambiado de number a string
+  payment_terms: z.number().optional(), // Cambiado a number para coincidir con la BD
   product_types: z.array(z.string()).min(1, 'Debe seleccionar al menos un tipo de producto'),
   // Campos adicionales para contratos
   contract_number: z.string().optional(),
@@ -109,7 +109,7 @@ export default function ProvidersPage() {
       phone: '',
       email: '',
       address: '',
-      payment_terms: '30',
+      payment_terms: 30,
       product_types: [],
       contract_number: '',
       contract_start_date: '',
@@ -133,7 +133,7 @@ export default function ProvidersPage() {
         phone: data.phone,
         email: data.email,
         address: data.address,
-        payment_terms: data.payment_terms,
+        payment_terms: data.payment_terms ? Number(data.payment_terms) : undefined,
         product_types: data.product_types,
         contract_number: data.contract_number,
         contract_start_date: data.contract_start_date,
@@ -163,7 +163,7 @@ export default function ProvidersPage() {
         phone: data.phone,
         email: data.email,
         address: data.address,
-        payment_terms: data.payment_terms,
+        payment_terms: data.payment_terms ? Number(data.payment_terms) : undefined,
         product_types: data.product_types,
         contract_number: data.contract_number,
         contract_start_date: data.contract_start_date,
@@ -258,38 +258,38 @@ export default function ProvidersPage() {
           </p>
         </div>
         <Button onClick={() => setIsCreateDialogOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Nuevo Proveedor
-        </Button>
+              <Plus className="h-4 w-4 mr-2" />
+              Nuevo Proveedor
+            </Button>
       </div>
 
       <Card>
         <CardHeader>
           <div className="flex items-center space-x-2">
             <Search className="h-4 w-4 text-muted-foreground" />
-            <Input
+              <Input
               placeholder="Buscar proveedores..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="max-w-sm"
-            />
-          </div>
+              />
+            </div>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
+            <Table>
+              <TableHeader>
+                <TableRow>
                 <TableHead>Empresa</TableHead>
                 <TableHead>RUC</TableHead>
-                <TableHead>Tipo</TableHead>
-                <TableHead>Contacto</TableHead>
+                  <TableHead>Tipo</TableHead>
+                  <TableHead>Contacto</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Teléfono</TableHead>
                 <TableHead>Términos</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
               {providers.filter(provider => {
                 const searchLower = searchQuery.toLowerCase();
                 return (
@@ -299,48 +299,48 @@ export default function ProvidersPage() {
                   (provider.ruc && provider.ruc.toLowerCase().includes(searchLower))
                 );
               }).map((provider) => (
-                <TableRow key={provider.id}>
+                  <TableRow key={provider.id}>
                   <TableCell className="font-medium">{provider.business_name}</TableCell>
                   <TableCell>{provider.ruc || '-'}</TableCell>
-                  <TableCell>
+                    <TableCell>
                     <Badge variant="outline">
                       {getTypeLabel(provider.type)}
-                    </Badge>
-                  </TableCell>
+                      </Badge>
+                    </TableCell>
                   <TableCell>{provider.contact_person || '-'}</TableCell>
                   <TableCell>{provider.email || '-'}</TableCell>
                   <TableCell>{provider.phone || '-'}</TableCell>
                   <TableCell>{provider.payment_terms || 'N/A'}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end space-x-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
+                        <Button
+                          variant="ghost"
+                          size="sm"
                         onClick={() => openViewDialog(provider)}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => openEditDialog(provider)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeleteProvider(provider.id)}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openEditDialog(provider)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteProvider(provider.id)}
                         disabled={isDeleting}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           
           {providers.filter(provider => {
             const searchLower = searchQuery.toLowerCase();
@@ -355,7 +355,7 @@ export default function ProvidersPage() {
               <p className="text-muted-foreground">
                 {searchQuery ? 'No se encontraron proveedores' : 'No hay proveedores registrados'}
               </p>
-            </div>
+          </div>
           )}
         </CardContent>
       </Card>
@@ -463,9 +463,9 @@ export default function ProvidersPage() {
                   </p>
                 )}
               </div>
-            </div>
-            
-            <div>
+              </div>
+
+              <div>
               <Label htmlFor="address">Dirección</Label>
               <Input
                 id="address"
@@ -477,11 +477,11 @@ export default function ProvidersPage() {
                   {createForm.formState.errors.address.message}
                 </p>
               )}
-            </div>
-            
-            <div>
+              </div>
+
+              <div>
               <Label htmlFor="payment_terms">Términos de Pago (días)</Label>
-              <Input
+                <Input
                 id="payment_terms"
                 type="number"
                 {...createForm.register('payment_terms', { valueAsNumber: true })}
@@ -492,18 +492,18 @@ export default function ProvidersPage() {
                   {createForm.formState.errors.payment_terms.message}
                 </p>
               )}
-            </div>
-            
-            <div>
+              </div>
+
+              <div>
               <Label htmlFor="product_types">Tipos de Productos *</Label>
               <div className="grid grid-cols-2 gap-2 mt-2">
                 {availableProductTypes.map(type => (
                   <div key={type.id} className="flex items-center space-x-2">
                     <Checkbox
                       id={`create-${type.id}`}
-                      checked={createForm.watch('product_types').includes(type.id)}
+                      checked={createForm.watch('product_types')?.includes(type.id) || false}
                       onCheckedChange={(checked) => {
-                        const currentTypes = createForm.watch('product_types');
+                        const currentTypes = createForm.watch('product_types') || [];
                         if (checked) {
                           createForm.setValue('product_types', [...currentTypes, type.id]);
                         } else {
@@ -522,7 +522,7 @@ export default function ProvidersPage() {
                   {createForm.formState.errors.product_types.message}
                 </p>
               )}
-            </div>
+              </div>
 
             {createForm.watch('type') === 'contract' && (
               <>
@@ -641,8 +641,8 @@ export default function ProvidersPage() {
                   </p>
                 )}
               </div>
-            </div>
-            
+              </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="edit-email">Email</Label>
@@ -709,9 +709,9 @@ export default function ProvidersPage() {
                   <div key={type.id} className="flex items-center space-x-2">
                     <Checkbox
                       id={`edit-${type.id}`}
-                      checked={editForm.watch('product_types').includes(type.id)}
+                      checked={editForm.watch('product_types')?.includes(type.id) || false}
                       onCheckedChange={(checked) => {
-                        const currentTypes = editForm.watch('product_types');
+                        const currentTypes = editForm.watch('product_types') || [];
                         if (checked) {
                           editForm.setValue('product_types', [...currentTypes, type.id]);
                         } else {
@@ -797,7 +797,7 @@ export default function ProvidersPage() {
                       {editForm.formState.errors.contract_file_url.message}
                     </p>
                   )}
-                </div>
+          </div>
               </>
             )}
             
@@ -809,7 +809,7 @@ export default function ProvidersPage() {
               >
                 Cancelar
               </Button>
-              <Button type="submit">Actualizar Proveedor</Button>
+            <Button type="submit">Actualizar Proveedor</Button>
             </div>
           </form>
         </DialogContent>
